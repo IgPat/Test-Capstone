@@ -24,7 +24,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem("sms_token");
       localStorage.removeItem("sms_user");
       if (window.location.pathname !== "/") {
-        window.location.href = "/";
+        window.location.href = "/api";
       }
     }
     const message =

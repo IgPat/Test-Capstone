@@ -22,7 +22,7 @@ connectDB();
 // The browser sends origins without a trailing slash. Normalize configured
 // values so split deployments do not fail due to formatting differences.
 const defaultOrigins = [
-  "http://localhost:5000",
+  "http://localhost:5001",
   "http://127.0.0.1:5500",
   "https://test-capstone-coral.vercel.app",
 ];
@@ -89,5 +89,5 @@ app.use((err, req, res, next) => {
     .json({ message: err.message || "Server error" });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`SMS API running on port ${PORT}`));
