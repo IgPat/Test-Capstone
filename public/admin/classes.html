@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classes — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('admin');
+    renderShell('admin');
+  </script>
+
+  <template id="classes-template">
+    <div class="toolbar">
+      <h1 style="margin:0;">Classes</h1>
+      <button class="btn-primary" id="add-class-btn">+ Add class</button>
+    </div>
+    <div class="grid grid-2" id="classes-grid"></div>
+  </template>
+
+  <div class="modal-overlay hidden" id="class-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Add class</h3>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div id="modal-error"></div>
+      <form id="class-form">
+        <input type="hidden" id="class-id" />
+        <label>Class name <input type="text" id="f-name" required placeholder="e.g. JSS1A" /></label>
+        <label>Subjects (comma separated)
+          <input type="text" id="f-subjects" placeholder="Mathematics, English, Basic Science" />
+        </label>
+        <div class="form-row">
+          <label>Capacity <input type="number" id="f-capacity" value="40" min="1" /></label>
+          <label>Homeroom label <input type="text" id="f-homeroom" placeholder="e.g. Room 12" /></label>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; margin-top:6px;" id="save-btn">Save class</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Enroll students modal -->
+  <div class="modal-overlay hidden" id="enroll-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Manage enrolment — <span id="enroll-class-name"></span></h3>
+        <button class="modal-close" id="enroll-close-btn">✕</button>
+      </div>
+      <p class="muted" style="font-size:.85rem;">Enrolled students</p>
+      <div id="enrolled-list" style="margin-bottom:16px;"></div>
+      <p class="muted" style="font-size:.85rem;">Enrol another student</p>
+      <div class="flex">
+        <select id="unenrolled-select" style="flex:1;"></select>
+        <button class="btn-primary btn-small" id="enroll-btn">Enrol</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allStudentsCache = [];
+    let currentClassId = null;
+
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('classes-template').content.cloneNode(true));
+      document.getElementById('add-class-btn').addEventListener('click', () => openModal());
+      document.getElementById('modal-close-btn').addEventListener('click', () => document.getElementById('class-modal').classList.add('hidden'));
+      document.getElementById('enroll-close-btn').addEventListener('click', () => document.getElementById('enroll-modal').classList.add('hidden'));
+      document.getElementById('class-form').addEventListener('submit', saveClass);
+      document.getElementById('enroll-btn').addEventListener('click', enrollSelected);
+      await loadClasses();
+    }
+
+    async function loadClasses() {
+      const grid = document.getElementById('classes-grid');
+      grid.innerHTML = `<div class="loading">Loading…</div>`;
+      try {
+        const classes = await api.get('/classes');
+        if (!classes.length) {
+          grid.innerHTML = `<div class="empty-state">No classes yet — add your first one.</div>`;
+          return;
+        }
+        grid.innerHTML = classes.map((c) => `
+          <div class="card">
+            <div class="flex-between">
+              <h3 style="margin:0;">${escapeHtml(c.name)}</h3>
+              <span class="pill pill-active">${c.students.length}/${c.capacity}</span>
+            </div>
+            <p class="muted" style="font-size:.85rem;">${c.homeroom ? 'Homeroom: ' + escapeHtml(c.homeroom) : 'No homeroom set'}</p>
+            <p style="font-size:.85rem;">${(c.subjects || []).map((s) => `<span class="pill pill-excused" style="margin:2px 4px 2px 0;">${escapeHtml(s)}</span>`).join('') || '<span class="muted">No subjects listed</span>'}</p>
+            <div class="flex" style="margin-top:10px;">
+              <button class="btn-secondary btn-small" onclick="openModal('${c._id}', '${encodeURIComponent(c.name)}', '${(c.subjects||[]).join(',')}', ${c.capacity}, '${encodeURIComponent(c.homeroom||'')}')">Edit</button>
+              <button class="btn-secondary btn-small" onclick="openEnrollModal('${c._id}', '${encodeURIComponent(c.name)}')">Manage students</button>
+              <button class="btn-danger btn-small" onclick="deleteClass('${c._id}')">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        grid.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function openModal(id, name, subjects, capacity, homeroom) {
+      const form = document.getElementById('class-form');
+      form.reset();
+      document.getElementById('modal-error').innerHTML = '';
+      document.getElementById('class-id').value = id || '';
+      document.getElementById('modal-title').textContent = id ? 'Edit class' : 'Add class';
+      if (id) {
+        document.getElementById('f-name').value = decodeURIComponent(name);
+        document.getElementById('f-subjects').value = subjects;
+        document.getElementById('f-capacity').value = capacity;
+        document.getElementById('f-homeroom').value = decodeURIComponent(homeroom);
+      } else {
+        document.getElementById('f-capacity').value = 40;
+      }
+      document.getElementById('class-modal').classList.remove('hidden');
+    }
+
+    async function saveClass(e) {
+      e.preventDefault();
+      const id = document.getElementById('class-id').value;
+      const errorBox = document.getElementById('modal-error');
+      errorBox.innerHTML = '';
+
+      const payload = {
+        name: document.getElementById('f-name').value,
+        subjects: document.getElementById('f-subjects').value.split(',').map((s) => s.trim()).filter(Boolean),
+        capacity: Number(document.getElementById('f-capacity').value) || 40,
+        homeroom: document.getElementById('f-homeroom').value,
+      };
+
+      try {
+        if (id) await api.put(`/classes/${id}`, payload);
+        else await api.post('/classes', payload);
+        document.getElementById('class-modal').classList.add('hidden');
+        loadClasses();
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    async function deleteClass(id) {
+      if (!confirm('Delete this class? Students will become unassigned.')) return;
+      try {
+        await api.del(`/classes/${id}`);
+        loadClasses();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function openEnrollModal(classId, encodedName) {
+      currentClassId = classId;
+      document.getElementById('enroll-class-name').textContent = decodeURIComponent(encodedName);
+      const cls = await api.get(`/classes/${classId}`);
+      document.getElementById('enrolled-list').innerHTML = cls.students.length
+        ? cls.students.map((s) => `
+            <div class="flex-between" style="padding:6px 0;">
+              <span>${escapeHtml(s.user?.name || 'Unknown')} <span class="muted">(${escapeHtml(s.admissionNumber)})</span></span>
+              <button class="btn-danger btn-small" onclick="unenroll('${s._id}')">Remove</button>
+            </div>
+          `).join('')
+        : '<p class="empty-state">No students enrolled yet.</p>';
+
+      if (!allStudentsCache.length) {
+        const { data } = await api.get('/students?limit=500');
+        allStudentsCache = data;
+      }
+      const enrolledIds = new Set(cls.students.map((s) => s._id));
+      const unenrolled = allStudentsCache.filter((s) => !enrolledIds.has(s._id) && s.status === 'active');
+      document.getElementById('unenrolled-select').innerHTML = unenrolled.length
+        ? unenrolled.map((s) => `<option value="${s._id}">${escapeHtml(s.user?.name || s.admissionNumber)}</option>`).join('')
+        : '<option value="">No students available</option>';
+
+      document.getElementById('enroll-modal').classList.remove('hidden');
+    }
+
+    async function enrollSelected() {
+      const studentId = document.getElementById('unenrolled-select').value;
+      if (!studentId) return;
+      await api.post(`/classes/${currentClassId}/enroll`, { studentId });
+      openEnrollModal(currentClassId, encodeURIComponent(document.getElementById('enroll-class-name').textContent));
+      loadClasses();
+    }
+
+    async function unenroll(studentId) {
+      await api.post(`/classes/${currentClassId}/unenroll`, { studentId });
+      openEnrollModal(currentClassId, encodeURIComponent(document.getElementById('enroll-class-name').textContent));
+      loadClasses();
+    }
+
+    init();
+  </script>
+</body>
+</html>

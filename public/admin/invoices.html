@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fees & Invoices — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('admin');
+    renderShell('admin');
+  </script>
+
+  <template id="invoices-template">
+    <div class="toolbar">
+      <h1 style="margin:0;">Fees & Invoices</h1>
+      <button class="btn-primary" id="new-invoice-btn">+ Generate invoice</button>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Student</th><th>Term</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+          <tbody id="invoices-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <div class="modal-overlay hidden" id="invoice-modal">
+    <div class="modal">
+      <div class="modal-header"><h3>Generate invoice</h3><button class="modal-close" id="modal-close-btn">✕</button></div>
+      <div id="modal-error"></div>
+      <form id="invoice-form">
+        <label>Student
+          <select id="f-student" required></select>
+        </label>
+        <label>Term <input type="text" id="f-term" required placeholder="e.g. Term 1 2026" /></label>
+        <p class="muted" style="font-size:.82rem; margin-bottom:4px;">Line items</p>
+        <div id="line-items"></div>
+        <button type="button" class="btn-link" id="add-line-item" style="margin:6px 0 14px;">+ Add line item</button>
+        <button type="submit" class="btn-primary" style="width:100%;">Create invoice</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="payment-modal">
+    <div class="modal">
+      <div class="modal-header"><h3>Record payment</h3><button class="modal-close" id="payment-close-btn">✕</button></div>
+      <div id="payment-error"></div>
+      <p class="muted" id="payment-context"></p>
+      <form id="payment-form">
+        <input type="hidden" id="payment-invoice-id" />
+        <label>Amount <input type="number" id="f-amount" min="1" required /></label>
+        <label>Method
+          <select id="f-method"><option value="simulated">Simulated payment</option><option value="cash">Cash</option><option value="transfer">Bank transfer</option></select>
+        </label>
+        <button type="submit" class="btn-primary" style="width:100%;">Record payment</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('invoices-template').content.cloneNode(true));
+      document.getElementById('new-invoice-btn').addEventListener('click', openInvoiceModal);
+      document.getElementById('modal-close-btn').addEventListener('click', () => document.getElementById('invoice-modal').classList.add('hidden'));
+      document.getElementById('payment-close-btn').addEventListener('click', () => document.getElementById('payment-modal').classList.add('hidden'));
+      document.getElementById('add-line-item').addEventListener('click', () => addLineItemRow());
+      document.getElementById('invoice-form').addEventListener('submit', createInvoice);
+      document.getElementById('payment-form').addEventListener('submit', recordPayment);
+      await loadInvoices();
+    }
+
+    async function loadInvoices() {
+      const tbody = document.getElementById('invoices-tbody');
+      tbody.innerHTML = `<tr><td colspan="7" class="loading">Loading…</td></tr>`;
+      try {
+        const invoices = await api.get('/invoices');
+        tbody.innerHTML = invoices.length
+          ? invoices.map((i) => {
+              const balance = i.totalAmount - i.amountPaid;
+              return `
+                <tr>
+                  <td>${escapeHtml(i.student?.user?.name || '—')}</td>
+                  <td>${escapeHtml(i.term)}</td>
+                  <td>${fmtMoney(i.totalAmount)}</td>
+                  <td>${fmtMoney(i.amountPaid)}</td>
+                  <td>${fmtMoney(balance)}</td>
+                  <td><span class="pill pill-${i.status}">${i.status}</span></td>
+                  <td>${balance > 0 ? `<button class="btn-secondary btn-small" onclick="openPaymentModal('${i._id}','${escapeHtml(i.student?.user?.name||'')}', ${balance})">Record payment</button>` : '—'}</td>
+                </tr>
+              `;
+            }).join('')
+          : `<tr><td colspan="7"><div class="empty-state">No invoices yet.</div></td></tr>`;
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7"><p class="error">${escapeHtml(err.message)}</p></td></tr>`;
+      }
+    }
+
+    function addLineItemRow(label = '', amount = '') {
+      const container = document.getElementById('line-items');
+      const row = document.createElement('div');
+      row.className = 'form-row line-item-row';
+      row.innerHTML = `
+        <label>Label <input type="text" class="li-label" value="${escapeHtml(label)}" required placeholder="e.g. Tuition" /></label>
+        <label>Amount <input type="number" class="li-amount" value="${amount}" required min="0" /></label>
+      `;
+      container.appendChild(row);
+    }
+
+    async function openInvoiceModal() {
+      document.getElementById('invoice-form').reset();
+      document.getElementById('modal-error').innerHTML = '';
+      document.getElementById('line-items').innerHTML = '';
+      addLineItemRow('Tuition', '');
+      addLineItemRow('Transport', '');
+
+      const select = document.getElementById('f-student');
+      if (!select.options.length) {
+        const { data } = await api.get('/students?limit=500&status=active');
+        select.innerHTML = data.map((s) => `<option value="${s._id}">${escapeHtml(s.user?.name || s.admissionNumber)}</option>`).join('');
+      }
+      document.getElementById('invoice-modal').classList.remove('hidden');
+    }
+
+    async function createInvoice(e) {
+      e.preventDefault();
+      const errorBox = document.getElementById('modal-error');
+      errorBox.innerHTML = '';
+      const lineItems = [...document.querySelectorAll('.line-item-row')].map((row) => ({
+        label: row.querySelector('.li-label').value,
+        amount: Number(row.querySelector('.li-amount').value),
+      }));
+
+      try {
+        await api.post('/invoices', {
+          student: document.getElementById('f-student').value,
+          term: document.getElementById('f-term').value,
+          lineItems,
+        });
+        document.getElementById('invoice-modal').classList.add('hidden');
+        loadInvoices();
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function openPaymentModal(invoiceId, studentName, balance) {
+      document.getElementById('payment-form').reset();
+      document.getElementById('payment-error').innerHTML = '';
+      document.getElementById('payment-invoice-id').value = invoiceId;
+      document.getElementById('payment-context').textContent = `${studentName} — outstanding balance: ${fmtMoney(balance)}`;
+      document.getElementById('f-amount').max = balance;
+      document.getElementById('payment-modal').classList.remove('hidden');
+    }
+
+    async function recordPayment(e) {
+      e.preventDefault();
+      const errorBox = document.getElementById('payment-error');
+      errorBox.innerHTML = '';
+      const invoiceId = document.getElementById('payment-invoice-id').value;
+      try {
+        await api.post(`/invoices/${invoiceId}/payments`, {
+          amount: Number(document.getElementById('f-amount').value),
+          method: document.getElementById('f-method').value,
+        });
+        document.getElementById('payment-modal').classList.add('hidden');
+        loadInvoices();
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

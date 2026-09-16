@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Students — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('admin');
+    renderShell('admin');
+  </script>
+
+  <template id="students-template">
+    <div class="toolbar">
+      <h1 style="margin:0;">Students</h1>
+      <button class="btn-primary" id="add-student-btn">+ Add student</button>
+    </div>
+
+    <div class="card">
+      <div class="filters" style="margin-bottom:14px;">
+        <input type="text" id="search-input" placeholder="Search by name or admission no." />
+        <select id="class-filter"><option value="">All classes</option></select>
+        <select id="status-filter">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Admission No.</th><th>Class</th><th>Status</th><th>Enrolled</th><th></th></tr>
+          </thead>
+          <tbody id="students-tbody"></tbody>
+        </table>
+      </div>
+      <div id="pagination" class="pagination"></div>
+    </div>
+  </template>
+
+  <!-- Add/Edit modal -->
+  <div class="modal-overlay hidden" id="student-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Add student</h3>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div id="modal-error"></div>
+      <form id="student-form">
+        <input type="hidden" id="student-id" />
+        <label>Full name <input type="text" id="f-name" required /></label>
+        <div class="form-row">
+          <label>Email <input type="email" id="f-email" required /></label>
+          <label>Admission number <input type="text" id="f-admissionNumber" required /></label>
+        </div>
+        <div id="password-field">
+          <label>Temporary password <input type="password" id="f-password" minlength="6" /></label>
+        </div>
+        <div class="form-row">
+          <label>Date of birth <input type="date" id="f-dob" /></label>
+          <label>Gender
+            <select id="f-gender"><option value="">—</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Contact <input type="text" id="f-contact" placeholder="Phone / email" /></label>
+          <label>Class <select id="f-classId"><option value="">Unassigned</option></select></label>
+        </div>
+        <div class="form-row">
+          <label>Guardian name <input type="text" id="f-guardianName" /></label>
+          <label>Guardian contact <input type="text" id="f-guardianContact" /></label>
+        </div>
+        <div id="status-field" style="display:none;">
+          <label>Status
+            <select id="f-status"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+          </label>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; margin-top:6px;" id="save-btn">Save student</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentPage = 1;
+    let classesCache = [];
+
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('students-template').content.cloneNode(true));
+      await loadClassOptions();
+      wireControls();
+      await loadStudents();
+    }
+
+    async function loadClassOptions() {
+      classesCache = await api.get('/classes');
+      const filterSelect = document.getElementById('class-filter');
+      const formSelect = document.getElementById('f-classId');
+      classesCache.forEach((c) => {
+        filterSelect.insertAdjacentHTML('beforeend', `<option value="${c._id}">${escapeHtml(c.name)}</option>`);
+        formSelect.insertAdjacentHTML('beforeend', `<option value="${c._id}">${escapeHtml(c.name)}</option>`);
+      });
+    }
+
+    function wireControls() {
+      document.getElementById('search-input').addEventListener('input', debounce(() => { currentPage = 1; loadStudents(); }, 350));
+      document.getElementById('class-filter').addEventListener('change', () => { currentPage = 1; loadStudents(); });
+      document.getElementById('status-filter').addEventListener('change', () => { currentPage = 1; loadStudents(); });
+      document.getElementById('add-student-btn').addEventListener('click', () => openModal());
+      document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+      document.getElementById('student-form').addEventListener('submit', saveStudent);
+    }
+
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    async function loadStudents() {
+      const search = document.getElementById('search-input').value.trim();
+      const classId = document.getElementById('class-filter').value;
+      const status = document.getElementById('status-filter').value;
+
+      const params = new URLSearchParams({ page: currentPage, limit: 10 });
+      if (search) params.set('search', search);
+      if (classId) params.set('classId', classId);
+      if (status) params.set('status', status);
+
+      const tbody = document.getElementById('students-tbody');
+      tbody.innerHTML = `<tr><td colspan="6" class="loading">Loading…</td></tr>`;
+
+      try {
+        const { data, total, pages } = await api.get(`/students?${params}`);
+        if (!data.length) {
+          tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No students match your filters.</div></td></tr>`;
+        } else {
+          tbody.innerHTML = data.map((s) => `
+            <tr>
+              <td>${escapeHtml(s.user?.name || '—')}</td>
+              <td>${escapeHtml(s.admissionNumber)}</td>
+              <td>${escapeHtml(s.classId?.name || 'Unassigned')}</td>
+              <td><span class="pill pill-${s.status}">${s.status}</span></td>
+              <td>${fmtDate(s.enrollmentDate)}</td>
+              <td class="flex">
+                <button class="btn-secondary btn-small" onclick="openModal('${s._id}')">Edit</button>
+                <button class="btn-danger btn-small" onclick="deactivateStudent('${s._id}')">${s.status === 'active' ? 'Deactivate' : 'Deactivated'}</button>
+                <button class="btn-secondary btn-small" onclick="resetPassword('${s._id}')">Reset PW</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+        renderPagination(pages, total);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6"><p class="error">${escapeHtml(err.message)}</p></td></tr>`;
+      }
+    }
+
+    function renderPagination(pages, total) {
+      const el = document.getElementById('pagination');
+      if (pages <= 1) { el.innerHTML = ''; return; }
+      let html = '';
+      for (let i = 1; i <= pages; i++) {
+        html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+      }
+      el.innerHTML = html;
+    }
+
+    function goToPage(p) { currentPage = p; loadStudents(); }
+
+    async function openModal(studentId) {
+      const modal = document.getElementById('student-modal');
+      const form = document.getElementById('student-form');
+      form.reset();
+      document.getElementById('modal-error').innerHTML = '';
+      document.getElementById('student-id').value = studentId || '';
+
+      if (studentId) {
+        document.getElementById('modal-title').textContent = 'Edit student';
+        document.getElementById('password-field').style.display = 'none';
+        document.getElementById('f-password').required = false;
+        document.getElementById('status-field').style.display = 'block';
+        document.getElementById('f-email').disabled = true;
+
+        const s = await api.get(`/students/${studentId}`);
+        document.getElementById('f-name').value = s.user?.name || '';
+        document.getElementById('f-email').value = s.user?.email || '';
+        document.getElementById('f-admissionNumber').value = s.admissionNumber;
+        document.getElementById('f-admissionNumber').disabled = true;
+        document.getElementById('f-dob').value = s.dob ? s.dob.slice(0, 10) : '';
+        document.getElementById('f-gender').value = s.gender || '';
+        document.getElementById('f-contact').value = s.contact || '';
+        document.getElementById('f-classId').value = s.classId?._id || s.classId || '';
+        document.getElementById('f-guardianName').value = s.guardianName || '';
+        document.getElementById('f-guardianContact').value = s.guardianContact || '';
+        document.getElementById('f-status').value = s.status;
+      } else {
+        document.getElementById('modal-title').textContent = 'Add student';
+        document.getElementById('password-field').style.display = 'block';
+        document.getElementById('f-password').required = true;
+        document.getElementById('status-field').style.display = 'none';
+        document.getElementById('f-email').disabled = false;
+        document.getElementById('f-admissionNumber').disabled = false;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('student-modal').classList.add('hidden'); }
+
+    async function saveStudent(e) {
+      e.preventDefault();
+      const id = document.getElementById('student-id').value;
+      const errorBox = document.getElementById('modal-error');
+      const saveBtn = document.getElementById('save-btn');
+      errorBox.innerHTML = '';
+      saveBtn.disabled = true;
+
+      const payload = {
+        name: document.getElementById('f-name').value,
+        email: document.getElementById('f-email').value,
+        admissionNumber: document.getElementById('f-admissionNumber').value,
+        dob: document.getElementById('f-dob').value || undefined,
+        gender: document.getElementById('f-gender').value || undefined,
+        contact: document.getElementById('f-contact').value || undefined,
+        classId: document.getElementById('f-classId').value || undefined,
+        guardianName: document.getElementById('f-guardianName').value || undefined,
+        guardianContact: document.getElementById('f-guardianContact').value || undefined,
+      };
+
+      try {
+        if (id) {
+          payload.status = document.getElementById('f-status').value;
+          await api.put(`/students/${id}`, payload);
+        } else {
+          payload.password = document.getElementById('f-password').value;
+          await api.post('/students', payload);
+        }
+        closeModal();
+        loadStudents();
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      } finally {
+        saveBtn.disabled = false;
+      }
+    }
+
+    async function deactivateStudent(id) {
+      if (!confirm('Deactivate this student? They will keep their history but be marked inactive.')) return;
+      try {
+        await api.del(`/students/${id}`);
+        loadStudents();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function resetPassword(id) {
+      if (!confirm('Generate a new temporary password for this student?')) return;
+      try {
+        const { tempPassword } = await api.put(`/students/${id}/reset-password`, {});
+        alert(`New temporary password: ${tempPassword}\n\nShare this with the student securely.`);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

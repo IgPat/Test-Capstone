@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Announcements — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('admin');
+    renderShell('admin');
+  </script>
+
+  <template id="announcements-template">
+    <div class="toolbar">
+      <h1 style="margin:0;">Announcements</h1>
+      <button class="btn-primary" id="new-announcement-btn">+ New announcement</button>
+    </div>
+    <div id="announcements-list"></div>
+  </template>
+
+  <div class="modal-overlay hidden" id="announcement-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">New announcement</h3>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div id="modal-error"></div>
+      <form id="announcement-form">
+        <input type="hidden" id="announcement-id" />
+        <label>Title <input type="text" id="f-title" required /></label>
+        <label>Body <textarea id="f-body" required></textarea></label>
+        <label>Audience
+          <select id="f-audience"><option value="all">All students</option></select>
+        </label>
+        <button type="submit" class="btn-primary" style="width:100%;">Publish</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('announcements-template').content.cloneNode(true));
+      const classes = await api.get('/classes');
+      document.getElementById('f-audience').innerHTML += classes.map((c) => `<option value="${c._id}">${escapeHtml(c.name)} only</option>`).join('');
+
+      document.getElementById('new-announcement-btn').addEventListener('click', () => openModal());
+      document.getElementById('modal-close-btn').addEventListener('click', () => document.getElementById('announcement-modal').classList.add('hidden'));
+      document.getElementById('announcement-form').addEventListener('submit', saveAnnouncement);
+
+      await loadAnnouncements();
+    }
+
+    async function loadAnnouncements() {
+      const list = document.getElementById('announcements-list');
+      list.innerHTML = '<div class="loading">Loading…</div>';
+      try {
+        const announcements = await api.get('/announcements');
+        list.innerHTML = announcements.length
+          ? announcements.map((a) => `
+              <div class="card">
+                <div class="flex-between">
+                  <h3 style="margin:0;">${escapeHtml(a.title)}</h3>
+                  <div class="flex">
+                    <button class="btn-secondary btn-small" onclick='editAnnouncement(${JSON.stringify(a).replace(/'/g, "&apos;")})'>Edit</button>
+                    <button class="btn-danger btn-small" onclick="deleteAnnouncement('${a._id}')">Delete</button>
+                  </div>
+                </div>
+                <p style="margin:8px 0;">${escapeHtml(a.body)}</p>
+                <span class="muted" style="font-size:.8rem;">${fmtDate(a.createdAt)} · Audience: ${a.audience === 'all' ? 'All students' : 'Specific class'}</span>
+              </div>
+            `).join('')
+          : '<div class="empty-state">No announcements yet.</div>';
+      } catch (err) {
+        list.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function openModal() {
+      document.getElementById('announcement-form').reset();
+      document.getElementById('modal-error').innerHTML = '';
+      document.getElementById('announcement-id').value = '';
+      document.getElementById('modal-title').textContent = 'New announcement';
+      document.getElementById('announcement-modal').classList.remove('hidden');
+    }
+
+    function editAnnouncement(a) {
+      document.getElementById('modal-error').innerHTML = '';
+      document.getElementById('announcement-id').value = a._id;
+      document.getElementById('modal-title').textContent = 'Edit announcement';
+      document.getElementById('f-title').value = a.title;
+      document.getElementById('f-body').value = a.body;
+      document.getElementById('f-audience').value = a.audience;
+      document.getElementById('announcement-modal').classList.remove('hidden');
+    }
+
+    async function saveAnnouncement(e) {
+      e.preventDefault();
+      const id = document.getElementById('announcement-id').value;
+      const errorBox = document.getElementById('modal-error');
+      errorBox.innerHTML = '';
+      const payload = {
+        title: document.getElementById('f-title').value,
+        body: document.getElementById('f-body').value,
+        audience: document.getElementById('f-audience').value,
+      };
+      try {
+        if (id) await api.put(`/announcements/${id}`, payload);
+        else await api.post('/announcements', payload);
+        document.getElementById('announcement-modal').classList.add('hidden');
+        loadAnnouncements();
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    async function deleteAnnouncement(id) {
+      if (!confirm('Delete this announcement?')) return;
+      try {
+        await api.del(`/announcements/${id}`);
+        loadAnnouncements();
+      } catch (err) { alert(err.message); }
+    }
+
+    init();
+  </script>
+</body>
+</html>

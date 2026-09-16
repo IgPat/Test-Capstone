@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('admin');
+    renderShell('admin');
+  </script>
+
+  <template id="attendance-template">
+    <h1>Attendance</h1>
+    <p class="muted">Mark daily attendance per class, then review history by date range.</p>
+
+    <div class="card">
+      <h3>Mark attendance</h3>
+      <div class="form-row">
+        <label>Class
+          <select id="mark-class-select"></select>
+        </label>
+        <label>Date
+          <input type="date" id="mark-date" />
+        </label>
+      </div>
+      <div id="mark-list" class="table-wrap"></div>
+      <button class="btn-primary" id="save-attendance-btn" style="margin-top:10px;">Save attendance</button>
+      <span id="mark-status" style="margin-left:10px; font-size:.85rem;"></span>
+    </div>
+
+    <div class="card">
+      <h3>Attendance history</h3>
+      <div class="filters" style="margin-bottom:14px;">
+        <select id="history-class-select"></select>
+        <input type="date" id="history-from" />
+        <input type="date" id="history-to" />
+        <button class="btn-secondary btn-small" id="history-filter-btn">Filter</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Student</th><th>Status</th></tr></thead>
+          <tbody id="history-tbody"><tr><td colspan="3" class="empty-state">Choose a class to view history.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const STATUS_OPTIONS = ['present', 'absent', 'late', 'excused'];
+
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('attendance-template').content.cloneNode(true));
+      document.getElementById('mark-date').value = new Date().toISOString().slice(0, 10);
+
+      const classes = await api.get('/classes');
+      const optsHtml = classes.map((c) => `<option value="${c._id}">${escapeHtml(c.name)}</option>`).join('');
+      document.getElementById('mark-class-select').innerHTML = optsHtml || '<option value="">No classes yet</option>';
+      document.getElementById('history-class-select').innerHTML = '<option value="">Select a class</option>' + optsHtml;
+
+      document.getElementById('mark-class-select').addEventListener('change', loadMarkList);
+      document.getElementById('mark-date').addEventListener('change', loadMarkList);
+      document.getElementById('save-attendance-btn').addEventListener('click', saveAttendance);
+      document.getElementById('history-filter-btn').addEventListener('click', loadHistory);
+
+      if (classes.length) loadMarkList();
+    }
+
+    async function loadMarkList() {
+      const classId = document.getElementById('mark-class-select').value;
+      const container = document.getElementById('mark-list');
+      if (!classId) { container.innerHTML = ''; return; }
+      container.innerHTML = '<div class="loading">Loading roster…</div>';
+
+      const cls = await api.get(`/classes/${classId}`);
+      if (!cls.students.length) {
+        container.innerHTML = '<div class="empty-state">No students enrolled in this class yet.</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <table>
+          <thead><tr><th>Student</th><th>Status</th></tr></thead>
+          <tbody>
+            ${cls.students.map((s) => `
+              <tr data-student-id="${s._id}">
+                <td>${escapeHtml(s.user?.name || s.admissionNumber)}</td>
+                <td>
+                  <select class="status-select">
+                    ${STATUS_OPTIONS.map((opt) => `<option value="${opt}" ${opt === 'present' ? 'selected' : ''}>${opt}</option>`).join('')}
+                  </select>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function saveAttendance() {
+      const classId = document.getElementById('mark-class-select').value;
+      const date = document.getElementById('mark-date').value;
+      const statusEl = document.getElementById('mark-status');
+      if (!classId || !date) return;
+
+      const records = [...document.querySelectorAll('#mark-list tr[data-student-id]')].map((row) => ({
+        student: row.dataset.studentId,
+        status: row.querySelector('.status-select').value,
+      }));
+
+      if (!records.length) return;
+
+      try {
+        await api.post('/attendance', { classId, date, records });
+        statusEl.textContent = '✓ Attendance saved';
+        statusEl.style.color = 'var(--success)';
+      } catch (err) {
+        statusEl.textContent = err.message;
+        statusEl.style.color = 'var(--danger)';
+      }
+    }
+
+    async function loadHistory() {
+      const classId = document.getElementById('history-class-select').value;
+      const from = document.getElementById('history-from').value;
+      const to = document.getElementById('history-to').value;
+      const tbody = document.getElementById('history-tbody');
+
+      if (!classId) {
+        tbody.innerHTML = `<tr><td colspan="3" class="empty-state">Choose a class to view history.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = `<tr><td colspan="3" class="loading">Loading…</td></tr>`;
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+
+      try {
+        const records = await api.get(`/attendance/class/${classId}?${params}`);
+        tbody.innerHTML = records.length
+          ? records.map((r) => `
+              <tr>
+                <td>${fmtDate(r.date)}</td>
+                <td>${escapeHtml(r.student?.user?.name || '—')}</td>
+                <td><span class="pill pill-${r.status}">${r.status}</span></td>
+              </tr>
+            `).join('')
+          : `<tr><td colspan="3" class="empty-state">No attendance records for this range.</td></tr>`;
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="3"><p class="error">${escapeHtml(err.message)}</p></td></tr>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

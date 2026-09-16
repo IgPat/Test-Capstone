@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grades — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('admin');
+    renderShell('admin');
+  </script>
+
+  <template id="grades-template">
+    <h1>Grades & Report Cards</h1>
+    <p class="muted">Pick a student to record scores and see their report card build up in real time.</p>
+
+    <div class="card">
+      <label>Student
+        <select id="student-select"><option value="">Select a student…</option></select>
+      </label>
+    </div>
+
+    <div class="grid grid-2" id="grades-body" style="display:none;">
+      <div class="card">
+        <h3>Record a grade</h3>
+        <div id="grade-error"></div>
+        <form id="grade-form">
+          <div class="form-row">
+            <label>Subject <input type="text" id="f-subject" required placeholder="e.g. Mathematics" /></label>
+            <label>Term <input type="text" id="f-term" required placeholder="e.g. Term 1 2026" /></label>
+          </div>
+          <div class="form-row">
+            <label>Score <input type="number" id="f-score" required min="0" /></label>
+            <label>Max score <input type="number" id="f-maxScore" value="100" required min="1" /></label>
+          </div>
+          <label>Remark <input type="text" id="f-remark" placeholder="Optional teacher remark" /></label>
+          <button type="submit" class="btn-primary" style="width:100%;">Add grade</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Report card</h3>
+        <div id="report-card"></div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    let selectedStudentId = null;
+
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('grades-template').content.cloneNode(true));
+      const { data } = await api.get('/students?limit=500&status=active');
+      document.getElementById('student-select').innerHTML += data.map((s) =>
+        `<option value="${s._id}">${escapeHtml(s.user?.name || s.admissionNumber)} — ${escapeHtml(s.admissionNumber)}</option>`
+      ).join('');
+      document.getElementById('student-select').addEventListener('change', onStudentChange);
+      document.getElementById('grade-form').addEventListener('submit', addGrade);
+    }
+
+    function onStudentChange(e) {
+      selectedStudentId = e.target.value;
+      document.getElementById('grades-body').style.display = selectedStudentId ? 'grid' : 'none';
+      if (selectedStudentId) loadReportCard();
+    }
+
+    async function loadReportCard() {
+      const container = document.getElementById('report-card');
+      container.innerHTML = '<div class="loading">Loading…</div>';
+      try {
+        const reportCard = await api.get(`/grades/student/${selectedStudentId}`);
+        container.innerHTML = reportCard.length
+          ? reportCard.map((t) => `
+              <div class="term-block">
+                <div class="flex-between">
+                  <strong>${escapeHtml(t.term)}</strong>
+                  <span class="pill pill-active">${t.average}% · Grade ${t.grade}</span>
+                </div>
+                <table style="margin-top:8px;">
+                  <thead><tr><th>Subject</th><th>Score</th><th>%</th><th>Remark</th></tr></thead>
+                  <tbody>
+                    ${t.subjects.map((sub) => `
+                      <tr>
+                        <td>${escapeHtml(sub.subject)}</td>
+                        <td>${sub.score}/${sub.maxScore}</td>
+                        <td>${sub.percentage}%</td>
+                        <td>${escapeHtml(sub.remark || '—')}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `).join('')
+          : '<div class="empty-state">No grades recorded yet for this student.</div>';
+      } catch (err) {
+        container.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    async function addGrade(e) {
+      e.preventDefault();
+      const errorBox = document.getElementById('grade-error');
+      errorBox.innerHTML = '';
+      try {
+        await api.post('/grades', {
+          student: selectedStudentId,
+          subject: document.getElementById('f-subject').value,
+          term: document.getElementById('f-term').value,
+          score: Number(document.getElementById('f-score').value),
+          maxScore: Number(document.getElementById('f-maxScore').value),
+          remark: document.getElementById('f-remark').value,
+        });
+        document.getElementById('grade-form').reset();
+        document.getElementById('f-maxScore').value = 100;
+        loadReportCard();
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

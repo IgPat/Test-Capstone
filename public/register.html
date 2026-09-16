@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register — School Management System</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <form class="auth-card" id="register-form">
+      <h2>Student registration</h2>
+      <div id="error-box"></div>
+      <label>Full name
+        <input type="text" id="name" required />
+      </label>
+      <label>Email
+        <input type="email" id="email" required autocomplete="email" />
+      </label>
+      <label>Admission number
+        <input type="text" id="admissionNumber" required placeholder="e.g. ADM-0042" />
+      </label>
+      <label>Password
+        <input type="password" id="password" required minlength="6" autocomplete="new-password" />
+      </label>
+      <button type="submit" class="btn-primary" id="submit-btn" style="width:100%;">Create account</button>
+      <p style="margin-top:14px;">Already have an account? <a href="/login.html">Log in</a></p>
+    </form>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    if (getCurrentUser()) location.href = '/index.html';
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('error-box');
+      const submitBtn = document.getElementById('submit-btn');
+      errorBox.innerHTML = '';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating account…';
+
+      const payload = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        admissionNumber: document.getElementById('admissionNumber').value,
+        password: document.getElementById('password').value,
+      };
+
+      try {
+        const data = await api.post('/auth/register', payload, { auth: false });
+        setSession(data.token, data.user);
+        location.href = '/student/dashboard.html';
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create account';
+      }
+    });
+  </script>
+</body>
+</html>

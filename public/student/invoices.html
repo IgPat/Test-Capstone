@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Fees — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('student');
+    renderShell('student');
+  </script>
+
+  <template id="invoices-template">
+    <h1>My Fees</h1>
+    <div class="card stat-card" style="max-width:280px;">
+      <span class="stat-label">Outstanding balance</span>
+      <span class="stat-value" id="balance-value">—</span>
+    </div>
+
+    <div class="card">
+      <h3>Invoices</h3>
+      <div id="invoices-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Payment history</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
+          <tbody id="payments-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <div class="modal-overlay hidden" id="pay-modal">
+    <div class="modal">
+      <div class="modal-header"><h3>Simulate payment</h3><button class="modal-close" id="pay-close-btn">✕</button></div>
+      <p class="muted" id="pay-context"></p>
+      <p class="hint">This is a simulated payment for demo purposes — no real payment gateway is used.</p>
+      <button class="btn-primary" style="width:100%;" id="confirm-pay-btn">Confirm simulated payment</button>
+    </div>
+  </div>
+
+  <script>
+    let payingInvoiceId = null;
+    let payingAmount = 0;
+
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('invoices-template').content.cloneNode(true));
+      document.getElementById('pay-close-btn').addEventListener('click', () => document.getElementById('pay-modal').classList.add('hidden'));
+      document.getElementById('confirm-pay-btn').addEventListener('click', confirmPayment);
+      await load();
+    }
+
+    async function load() {
+      const user = getCurrentUser();
+      try {
+        const { invoices, payments, balance } = await api.get(`/invoices/student/${user.studentProfile}`);
+        document.getElementById('balance-value').textContent = fmtMoney(balance);
+
+        document.getElementById('invoices-list').innerHTML = invoices.length
+          ? invoices.map((i) => {
+              const bal = i.totalAmount - i.amountPaid;
+              return `
+                <div class="term-block">
+                  <div class="flex-between">
+                    <strong>${escapeHtml(i.term)}</strong>
+                    <span class="pill pill-${i.status}">${i.status}</span>
+                  </div>
+                  <table style="margin-top:8px;">
+                    <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+                    <tbody>
+                      ${i.lineItems.map((li) => `<tr><td>${escapeHtml(li.label)}</td><td>${fmtMoney(li.amount)}</td></tr>`).join('')}
+                    </tbody>
+                  </table>
+                  <div class="flex-between" style="margin-top:8px;">
+                    <span class="muted">Paid ${fmtMoney(i.amountPaid)} of ${fmtMoney(i.totalAmount)}</span>
+                    ${bal > 0 ? `<button class="btn-primary btn-small" onclick="openPayModal('${i._id}', ${bal}, '${escapeHtml(i.term)}')">Simulate payment</button>` : ''}
+                  </div>
+                </div>
+              `;
+            }).join('')
+          : '<div class="empty-state">No invoices yet.</div>';
+
+        document.getElementById('payments-tbody').innerHTML = payments.length
+          ? payments.map((p) => `<tr><td>${fmtDate(p.date)}</td><td>${fmtMoney(p.amount)}</td><td>${escapeHtml(p.method)}</td></tr>`).join('')
+          : `<tr><td colspan="3"><div class="empty-state">No payments recorded yet.</div></td></tr>`;
+      } catch (err) {
+        document.getElementById('page-mount').innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function openPayModal(invoiceId, balance, term) {
+      payingInvoiceId = invoiceId;
+      payingAmount = balance;
+      document.getElementById('pay-context').textContent = `${term} — outstanding balance: ${fmtMoney(balance)}`;
+      document.getElementById('pay-modal').classList.remove('hidden');
+    }
+
+    async function confirmPayment() {
+      try {
+        await api.post(`/invoices/${payingInvoiceId}/payments`, { amount: payingAmount, method: 'simulated' });
+        document.getElementById('pay-modal').classList.add('hidden');
+        document.getElementById('page-mount').innerHTML = '';
+        document.getElementById('page-mount').appendChild(document.getElementById('invoices-template').content.cloneNode(true));
+        load();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

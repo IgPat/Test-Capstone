@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log in — School Management System</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <form class="auth-card" id="login-form">
+      <h2>🏫 Log in</h2>
+      <div id="error-box"></div>
+      <label>Email
+        <input type="email" id="email" required autocomplete="email" />
+      </label>
+      <label>Password
+        <input type="password" id="password" required autocomplete="current-password" />
+      </label>
+      <div class="flex-between" style="margin-bottom:14px;">
+        <a href="/forgot-password.html" style="font-size:.82rem;">Forgot password?</a>
+      </div>
+      <button type="submit" class="btn-primary" id="submit-btn" style="width:100%;">Log in</button>
+      <p class="hint" style="margin-top:14px;">Demo admin: admin@school.test / Admin123!</p>
+      <p class="hint">Demo student: student@school.test / Student123!</p>
+      <p style="margin-top:10px;">No account? <a href="/register.html">Register as a student</a></p>
+    </form>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    if (getCurrentUser()) {
+      const u = getCurrentUser();
+      location.href = u.role === 'admin' ? '/admin/dashboard.html' : '/student/dashboard.html';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('error-box');
+      const submitBtn = document.getElementById('submit-btn');
+      errorBox.innerHTML = '';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Logging in…';
+
+      try {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const data = await api.post('/auth/login', { email, password }, { auth: false });
+        setSession(data.token, data.user);
+        location.href = data.user.role === 'admin' ? '/admin/dashboard.html' : '/student/dashboard.html';
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log in';
+      }
+    });
+  </script>
+</body>
+</html>

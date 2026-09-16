@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('student');
+    renderShell('student');
+  </script>
+
+  <template id="profile-template">
+    <h1>My Profile</h1>
+    <p class="muted">You can update your contact details and guardian contact yourself. Other fields (name, class,
+      admission number) can only be changed by an admin.</p>
+    <div class="card" style="max-width:560px;">
+      <div id="error-box"></div>
+      <div id="success-box"></div>
+      <form id="profile-form">
+        <div class="form-row">
+          <label>Full name <input type="text" id="f-name" disabled /></label>
+          <label>Admission number <input type="text" id="f-admissionNumber" disabled /></label>
+        </div>
+        <div class="form-row">
+          <label>Email <input type="email" id="f-email" disabled /></label>
+          <label>Class <input type="text" id="f-class" disabled /></label>
+        </div>
+        <label>Contact (editable) <input type="text" id="f-contact" placeholder="Phone number or personal email" /></label>
+        <div class="form-row">
+          <label>Guardian name <input type="text" id="f-guardianName" disabled /></label>
+          <label>Guardian contact (editable) <input type="text" id="f-guardianContact" /></label>
+        </div>
+        <button type="submit" class="btn-primary">Save changes</button>
+      </form>
+    </div>
+  </template>
+
+  <script>
+    let profileId = null;
+
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('profile-template').content.cloneNode(true));
+      const user = getCurrentUser();
+      profileId = user.studentProfile;
+
+      try {
+        const s = await api.get(`/students/${profileId}`);
+        document.getElementById('f-name').value = s.user?.name || '';
+        document.getElementById('f-admissionNumber').value = s.admissionNumber;
+        document.getElementById('f-email').value = s.user?.email || '';
+        document.getElementById('f-class').value = s.classId?.name || 'Unassigned';
+        document.getElementById('f-contact').value = s.contact || '';
+        document.getElementById('f-guardianName').value = s.guardianName || '';
+        document.getElementById('f-guardianContact').value = s.guardianContact || '';
+      } catch (err) {
+        document.getElementById('error-box').innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+
+      document.getElementById('profile-form').addEventListener('submit', save);
+    }
+
+    async function save(e) {
+      e.preventDefault();
+      const errorBox = document.getElementById('error-box');
+      const successBox = document.getElementById('success-box');
+      errorBox.innerHTML = ''; successBox.innerHTML = '';
+      try {
+        await api.put(`/students/${profileId}`, {
+          contact: document.getElementById('f-contact').value,
+          guardianContact: document.getElementById('f-guardianContact').value,
+        });
+        successBox.innerHTML = `<p class="success-msg">Profile updated.</p>`;
+      } catch (err) {
+        errorBox.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

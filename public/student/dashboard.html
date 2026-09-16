@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Dashboard — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script src="/js/vendor/chart.umd.min.js"></script>
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('student');
+    renderShell('student');
+  </script>
+
+  <template id="dashboard-template">
+    <h1>Welcome back, <span id="welcome-name"></span> 👋</h1>
+    <p class="muted">Here's how things are looking right now.</p>
+
+    <div class="grid grid-4" id="stat-cards"></div>
+
+    <div class="grid grid-2" style="margin-top:16px;">
+      <div class="card">
+        <h3>Attendance breakdown</h3>
+        <canvas id="attendance-chart" height="180"></canvas>
+      </div>
+      <div class="card">
+        <h3>Latest grades</h3>
+        <div id="latest-grades"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Recent announcements</h3>
+      <div id="recent-announcements"></div>
+    </div>
+  </template>
+
+  <script>
+    async function loadDashboard() {
+      const mount = document.getElementById('page-mount');
+      mount.appendChild(document.getElementById('dashboard-template').content.cloneNode(true));
+
+      const user = getCurrentUser();
+      const nameEl = document.getElementById('welcome-name');
+      if (nameEl && user && user.name) {
+        nameEl.textContent = user.name.split(' ')[0];
+      }
+
+      try {
+        const stats = await api.get('/dashboard/student');
+
+        document.getElementById('stat-cards').innerHTML = `
+          <div class="card stat-card">
+            <span class="stat-label">Attendance</span>
+            <span class="stat-value">${stats.attendancePercentage}%</span>
+            <div class="progress-bar" style="margin-top:6px;"><div style="width:${stats.attendancePercentage}%;"></div></div>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Fee balance</span>
+            <span class="stat-value">${fmtMoney(stats.feeBalance)}</span>
+            <span class="stat-sub">${stats.feeBalance > 0 ? 'Outstanding' : 'All settled'}</span>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Grades recorded</span>
+            <span class="stat-value">${stats.latestGrades.length}</span>
+            <span class="stat-sub">Most recent entries</span>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Announcements</span>
+            <span class="stat-value">${stats.announcements.length}</span>
+            <span class="stat-sub">Latest school-wide posts</span>
+          </div>
+        `;
+
+        if (typeof Chart !== 'undefined') {
+          const presentRate = stats.attendancePercentage || 0;
+          const absentRate = Math.max(0, 100 - presentRate);
+          new Chart(document.getElementById('attendance-chart'), {
+            type: 'doughnut',
+            data: {
+              labels: ['Present (%)', 'Absent / Unmarked (%)'],
+              datasets: [{ data: [presentRate, absentRate], backgroundColor: ['#1a9c5f', '#e2e8f0'] }],
+            },
+            options: { plugins: { legend: { position: 'bottom' } } },
+          });
+        }
+
+        document.getElementById('latest-grades').innerHTML = stats.latestGrades.length
+          ? stats.latestGrades.map((g) => `
+              <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+                <span>${escapeHtml(g.subject)} <span class="muted">(${escapeHtml(g.term)})</span></span>
+                <strong>${g.score}/${g.maxScore}</strong>
+              </div>
+            `).join('')
+          : '<div class="empty-state">No grades recorded yet.</div>';
+
+        document.getElementById('recent-announcements').innerHTML = stats.announcements.length
+          ? stats.announcements.map((a) => `
+              <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+                <strong>${escapeHtml(a.title)}</strong>
+                <p class="muted" style="margin:2px 0 0; font-size:.85rem;">${escapeHtml(a.body)}</p>
+              </div>
+            `).join('')
+          : '<div class="empty-state">No announcements yet.</div>';
+      } catch (err) {
+        document.getElementById('page-mount').innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+    loadDashboard();
+  </script>
+</body>
+</html>

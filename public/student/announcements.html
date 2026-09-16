@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Announcements — SMS</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/shell.js"></script>
+  <script>
+    requireAuth('student');
+    renderShell('student');
+  </script>
+
+  <template id="announcements-template">
+    <h1>Announcements</h1>
+    <div id="announcements-list"></div>
+  </template>
+
+  <script>
+    async function init() {
+      document.getElementById('page-mount').appendChild(document.getElementById('announcements-template').content.cloneNode(true));
+      const list = document.getElementById('announcements-list');
+      try {
+        const announcements = await api.get('/announcements');
+        list.innerHTML = announcements.length
+          ? announcements.map((a) => `
+              <div class="card">
+                <h3 style="margin:0 0 6px;">${escapeHtml(a.title)}</h3>
+                <p>${escapeHtml(a.body)}</p>
+                <span class="muted" style="font-size:.8rem;">${fmtDate(a.createdAt)}</span>
+              </div>
+            `).join('')
+          : '<div class="empty-state">No announcements yet.</div>';
+      } catch (err) {
+        list.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+    init();
+  </script>
+</body>
+</html>
