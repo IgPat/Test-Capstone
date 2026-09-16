@@ -67,8 +67,6 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`SMS API running on port ${PORT}`));
 
-const cors = require("cors");
-
 app.use(cors({
   origin: "https://test-capstone-coral.vercel.app/",
   credentials: true
