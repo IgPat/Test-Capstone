@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const StudentProfile = require("../models/StudentProfile");
+const sendWelcomeEmail = require("../config/mail");
 
 const signToken = (user) =>
   jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -49,6 +50,11 @@ exports.register = async (req, res) => {
 
     user.studentProfile = profile._id;
     await user.save();
+
+    // Send welcome email asynchronously without blocking registration response
+    sendWelcomeEmail(normalizedEmail, name, password).catch((emailErr) => {
+      console.error("Failed to send welcome email on registration:", emailErr.message);
+    });
 
     const token = signToken(user);
     res.status(201).json({ token, user: user.toSafeObject() });

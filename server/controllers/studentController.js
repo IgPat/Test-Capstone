@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const StudentProfile = require('../models/StudentProfile');
 const User = require('../models/User');
 const Class = require('../models/Class');
+const sendWelcomeEmail = require('../config/mail');
 
 // GET /api/students?page=&limit=&search=&classId=&status=
 exports.listStudents = async (req, res) => {
@@ -134,6 +135,10 @@ exports.createStudent = async (req, res) => {
     if (classId) {
       await Class.findByIdAndUpdate(classId, { $addToSet: { students: profile._id } });
     }
+
+    sendWelcomeEmail(email.toLowerCase(), name, password).catch((emailErr) => {
+      console.error("Failed to send welcome email on student creation:", emailErr.message);
+    });
 
     res.status(201).json(profile);
   } catch (err) {
