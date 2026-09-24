@@ -25,6 +25,7 @@ const sendWelcomeEmail = async (email, name, password) => {
           <strong>Email:</strong> ${email}<br>
           <strong>Password:</strong> ${password}
         </p>
+        <p>https://test-capstone-coral.vercel.app</p>
 
         <p>
           Please log in and change your password after your first login.
