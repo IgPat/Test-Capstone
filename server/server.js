@@ -14,15 +14,21 @@ const invoiceRoutes = require("./routes/invoiceRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const emailRoutes = require("./routes/emailRoutes");
 
 const app = express();
 
 connectDB();
 
-// The browser sends origins without a trailing slash. Normalize configured
-// values so split deployments do not fail due to formatting differences.
+// Allow default local origins, configured origins, and any localhost/127.0.0.1 port during development
 const defaultOrigins = [
-  "http://localhost:5001",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5000",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
   "http://127.0.0.1:5500",
   "https://test-capstone-coral.vercel.app",
 ];
@@ -32,23 +38,42 @@ const configuredOrigins = (process.env.CLIENT_ORIGIN || "")
   .filter(Boolean);
 const allowedOrigins = [...new Set([...defaultOrigins, ...configuredOrigins])];
 
+const isLocalhost = (origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+    if (!origin) return callback(null, true);
+    const cleanOrigin = origin.replace(/\/$/, "");
+    if (allowedOrigins.includes(cleanOrigin) || isLocalhost(cleanOrigin)) {
       return callback(null, true);
     }
-    return callback(new Error(`CORS origin not allowed: ${origin}`));
+    return callback(null, false);
   },
   credentials: true,
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/api/health", (req, res) =>
   res.json({ status: "ok", time: new Date().toISOString() }),
 );
+
+// Auto-rewrite requests missing the /api prefix (e.g. /auth/login -> /api/auth/login)
+app.use((req, res, next) => {
+  if (
+    !req.path.startsWith("/api") &&
+    !req.path.startsWith("/uploads") &&
+    !req.path.startsWith("/assets") &&
+    /^\/(auth|students|classes|attendance|grades|invoices|announcements|notifications|dashboard|uploads|emails)($|\/)/.test(req.path)
+  ) {
+    req.url = "/api" + req.url;
+  }
+  next();
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/students", studentRoutes);
@@ -59,7 +84,9 @@ app.use("/api/invoices", invoiceRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/emails", emailRoutes);
+app.use("/api/payments", paymentRoutes);
 const fs = require("fs");
 
 const clientDistPath = path.join(__dirname, "..", "client", "dist");
@@ -89,5 +116,5 @@ app.use((err, req, res, next) => {
     .json({ message: err.message || "Server error" });
 });
 
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`SMS API running on port ${PORT}`));

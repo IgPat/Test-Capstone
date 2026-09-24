@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { fmtMoney, fmtDate } from '../../utils/formatters';
 import { Receipt, CreditCard, CheckCircle, X } from 'lucide-react';
+import Payment from '../../components/Payment';
 
 export default function StudentInvoices() {
   const [invoices, setInvoices] = useState([]);
@@ -160,9 +161,16 @@ export default function StudentInvoices() {
 
               <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" className="btn-secondary" onClick={() => setShowPayModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={processing}>
-                  {processing ? 'Processing...' : 'Pay Now'}
-                </button>
+                <Payment
+                invoice={selectedInvoice}
+                amount={payAmount}
+                email={selectedInvoice?.student?.user?.email}
+                onSuccess={() => {
+                    setShowPayModal(false);
+                    fetchMyInvoices();
+                  }}
+                  onError={(msg) => setPayMsg({ error: msg, success: '' })}
+                />
               </div>
             </form>
           </div>

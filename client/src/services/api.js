@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const rawBase = (import.meta.env.VITE_API_URL || "/api").trim().replace(/\/$/, "");
+const API_BASE = rawBase.endsWith("/api") ? rawBase : `${rawBase}/api`;
+
 
 const apiClient = axios.create({
   baseURL: API_BASE,
@@ -24,7 +26,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem("sms_token");
       localStorage.removeItem("sms_user");
       if (window.location.pathname !== "/") {
-        window.location.href = "/api";
+        window.location.href = "/";
       }
     }
     const message =

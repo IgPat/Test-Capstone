@@ -19,8 +19,8 @@ export default function AdminStudents() {
   const [showResetModal, setShowResetModal] = useState(false);
 
   // Form states
-  const [addForm, setAddForm] = useState({ name: '', email: '', gender: 'female', classId: '', password: '' });
-  const [editForm, setEditForm] = useState({ id: '', name: '', email: '', gender: 'female', classId: '', status: 'active' });
+  const [addForm, setAddForm] = useState({ name: '', email: '', gender: 'female', classId: '', admissionNumber: '', password: '' });
+  const [editForm, setEditForm] = useState({ id: '', name: '', email: '', gender: 'female', admissionNumber: '', classId: '', status: 'active' });
   const [resetData, setResetData] = useState({ id: '', studentName: '', newPassword: '' });
   const [formMsg, setFormMsg] = useState({ error: '', success: '' });
 
@@ -67,7 +67,7 @@ export default function AdminStudents() {
       await api.post('/students', addForm);
       setFormMsg({ error: '', success: 'Student created successfully!' });
       setShowAddModal(false);
-      setAddForm({ name: '', email: '', gender: 'female', classId: '', password: '' });
+      setAddForm({ name: '', email: '', gender: 'female', classId: '', admissionNumber: '', password: '' });
       fetchStudents();
     } catch (err) {
       setFormMsg({ error: err.message, success: '' });
@@ -80,6 +80,7 @@ export default function AdminStudents() {
       name: s.user?.name || '',
       email: s.user?.email || '',
       gender: s.gender || 'female',
+      admissionNumber: s.admissionNumber || '',
       classId: s.classId?._id || s.classId || '',
       status: s.status || 'active',
     });
@@ -95,6 +96,7 @@ export default function AdminStudents() {
         name: editForm.name,
         email: editForm.email,
         gender: editForm.gender,
+        admissionNumber: editForm.admissionNumber,
         classId: editForm.classId,
         status: editForm.status,
       });
@@ -272,6 +274,11 @@ export default function AdminStudents() {
                   </select>
                 </label>
               </div>
+              <div className="form-row" style={{ marginTop: '10px' }}>
+                <label>Admission Number
+                  <input type="text" required placeholder="e.g. ADM001" value={addForm.admissionNumber} onChange={(e) => setAddForm({ ...addForm, admissionNumber: e.target.value })} />
+                </label>
+                </div>                
 
               <label style={{ marginTop: '10px' }}>Initial Password
                 <input type="password" required placeholder="At least 6 characters" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} />
@@ -321,6 +328,12 @@ export default function AdminStudents() {
                       <option key={c._id} value={c._id}>{c.name}</option>
                     ))}
                   </select>
+                </label>
+              </div>
+
+              <div className="form-row" style={{ marginTop: '10px' }}>
+                <label>Admission Number
+                  <input type="text" required placeholder="e.g. ADM001" value={editForm.admissionNumber} onChange={(e) => setEditForm({ ...editForm, admissionNumber: e.target.value })} />
                 </label>
               </div>
 

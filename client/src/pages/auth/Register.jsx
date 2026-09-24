@@ -52,6 +52,7 @@ export default function Register() {
       };
 
       const res = await api.post("/auth/register", payload);
+
       login(res.token, res.user);
       navigate("/student/dashboard");
     } catch (err) {
