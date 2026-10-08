@@ -3,10 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import { fmtDate } from "../../utils/formatters";
-import { Bell, LogOut, GraduationCap, CheckCheck } from "lucide-react";
+import { Bell, LogOut, GraduationCap, CheckCheck, Menu, X } from "lucide-react";
 import "../../pages/auth/RebuiltPages.css";
 
-export default function Navbar() {
+export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -64,14 +64,23 @@ export default function Navbar() {
 
   return (
     <header className="rebuilt-navbar">
-      <Link to={dashboardPath} className="rebuilt-navbar-brand">
-        <span className="rebuilt-navbar-brand-mark">
-          <GraduationCap size={20} />
-        </span>
-        <span>
-          EduCore<span className="period">.</span>
-        </span>
-      </Link>
+      <div className="rebuilt-navbar-left">
+        <button
+          className="rebuilt-menu-btn"
+          onClick={onToggleSidebar}
+          aria-label="Toggle navigation menu"
+        >
+          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <Link to={dashboardPath} className="rebuilt-navbar-brand">
+          <span className="rebuilt-navbar-brand-mark">
+            <GraduationCap size={20} />
+          </span>
+          <span>
+            EduCore<span className="period">.</span>
+          </span>
+        </Link>
+      </div>
 
       <div className="rebuilt-navbar-right">
         <div className="rebuilt-notif-container">

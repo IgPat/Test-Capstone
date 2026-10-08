@@ -32,18 +32,19 @@ const STUDENT_LINKS = [
   { path: '/student/announcements', label: 'Announcements', icon: Megaphone },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const { user } = useAuth();
   const links = user?.role === 'admin' ? ADMIN_LINKS : STUDENT_LINKS;
 
   return (
-    <aside className="rebuilt-sidebar">
+    <aside className={`rebuilt-sidebar ${isOpen ? 'mobile-open' : ''}`}>
       {links.map((link) => {
         const Icon = link.icon;
         return (
           <NavLink
             key={link.path}
             to={link.path}
+            onClick={onClose}
             className={({ isActive }) =>
               `rebuilt-sidebar-link ${isActive ? 'active' : ''}`
             }
