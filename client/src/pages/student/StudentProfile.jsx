@@ -49,62 +49,119 @@ export default function StudentProfile() {
     }
   };
 
-  if (loading) return <div className="loading">Loading your profile…</div>;
+  if (loading) return <div className="rebuilt-loading-state">Loading your profile…</div>;
 
   return (
-    <div style={{ maxWidth: '800px' }}>
-      <h1>My Profile</h1>
-      <p className="muted">View your academic enrollment details and keep your contact information up to date.</p>
+    <div className="rebuilt-page" style={{ maxWidth: '840px' }}>
+      <div className="rebuilt-page-header">
+        <div>
+          <h1 className="rebuilt-page-title">My Profile</h1>
+          <p className="rebuilt-page-subtitle">View your academic enrollment details and keep your contact information up to date.</p>
+        </div>
+      </div>
 
-      {msg.success && <div className="success-msg">{msg.success}</div>}
-      {msg.error && <div className="error">{msg.error}</div>}
+      {msg.success && <div className="rebuilt-alert rebuilt-alert-success">{msg.success}</div>}
+      {msg.error && <div className="rebuilt-alert rebuilt-alert-error">{msg.error}</div>}
 
       {profile && (
-        <div className="card" style={{ marginBottom: '20px' }}>
-          <div className="flex" style={{ gap: '16px', marginBottom: '16px' }}>
-            <div style={{ background: 'var(--primary-light)', color: 'var(--primary)', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <UserCheck size={28} />
+        <div className="rebuilt-card" style={{ marginBottom: '24px' }}>
+          <div className="rebuilt-flex-center" style={{ gap: '16px', marginBottom: '20px' }}>
+            <div style={{
+              background: 'rgba(33, 73, 61, 0.1)',
+              color: 'var(--portal-primary)',
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.4rem'
+            }}>
+              <UserCheck size={30} />
             </div>
             <div>
-              <h2 style={{ margin: 0 }}>{profile.user?.name}</h2>
-              <p className="muted" style={{ margin: '2px 0 0' }}>Admission Number: <strong>{profile.admissionNumber}</strong></p>
+              <h2 style={{ fontFamily: 'var(--portal-font-serif)', fontSize: '1.4rem', color: 'var(--portal-text-dark)', margin: 0, fontWeight: 700 }}>
+                {profile.user?.name}
+              </h2>
+              <p style={{ color: 'var(--portal-text-muted)', margin: '4px 0 0', fontSize: '.9rem' }}>
+                Admission Number: <strong style={{ color: 'var(--portal-primary)' }}>{profile.admissionNumber}</strong>
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-2" style={{ background: 'var(--bg)', padding: '14px', borderRadius: '10px', fontSize: '.9rem' }}>
-            <div>Email: <strong>{profile.user?.email}</strong></div>
-            <div>Class: <strong>{profile.classId?.name || 'Unassigned'}</strong></div>
-            <div>Gender: <strong style={{ textTransform: 'capitalize' }}>{profile.gender}</strong></div>
-            <div>Status: <strong style={{ textTransform: 'capitalize', color: 'var(--success)' }}>{profile.status}</strong></div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px',
+            background: '#f4f6f0',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            fontSize: '.9rem',
+            border: '1px solid #e1e7df'
+          }}>
+            <div><span style={{ color: 'var(--portal-text-muted)' }}>Email:</span> <br /><strong style={{ color: 'var(--portal-text-dark)' }}>{profile.user?.email}</strong></div>
+            <div><span style={{ color: 'var(--portal-text-muted)' }}>Class:</span> <br /><strong style={{ color: 'var(--portal-text-dark)' }}>{profile.classId?.name || 'Unassigned'}</strong></div>
+            <div><span style={{ color: 'var(--portal-text-muted)' }}>Gender:</span> <br /><strong style={{ textTransform: 'capitalize', color: 'var(--portal-text-dark)' }}>{profile.gender}</strong></div>
+            <div><span style={{ color: 'var(--portal-text-muted)' }}>Status:</span> <br /><span className="rebuilt-badge rebuilt-badge-active" style={{ textTransform: 'capitalize' }}>{profile.status}</span></div>
           </div>
         </div>
       )}
 
-      <div className="card">
-        <h3>Update Contact Details</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <label>Phone Number
-              <input type="text" placeholder="e.g. +234 801 234 5678" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </label>
+      <div className="rebuilt-card">
+        <h3 style={{ fontFamily: 'var(--portal-font-serif)', fontSize: '1.25rem', color: 'var(--portal-text-dark)', marginTop: 0, marginBottom: '16px' }}>
+          Update Contact Details
+        </h3>
+        <form onSubmit={handleSubmit} className="portal-form">
+          <div className="portal-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="portal-form-group">
+              <label>Phone Number</label>
+              <input
+                type="text"
+                className="portal-input"
+                placeholder="e.g. +234 801 234 5678"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+            </div>
 
-            <label>Residential Address
-              <input type="text" placeholder="e.g. 12 School Road, Lagos" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </label>
+            <div className="portal-form-group">
+              <label>Residential Address</label>
+              <input
+                type="text"
+                className="portal-input"
+                placeholder="e.g. 12 School Road, Lagos"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
+            </div>
           </div>
 
-          <div className="form-row" style={{ marginTop: '12px' }}>
-            <label>Parent/Guardian Name
-              <input type="text" placeholder="e.g. Mrs. Mary Doe" value={form.guardianName} onChange={(e) => setForm({ ...form, guardianName: e.target.value })} />
-            </label>
+          <div className="portal-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+            <div className="portal-form-group">
+              <label>Parent/Guardian Name</label>
+              <input
+                type="text"
+                className="portal-input"
+                placeholder="e.g. Mrs. Mary Doe"
+                value={form.guardianName}
+                onChange={(e) => setForm({ ...form, guardianName: e.target.value })}
+              />
+            </div>
 
-            <label>Guardian Phone Number
-              <input type="text" placeholder="e.g. +234 809 876 5432" value={form.guardianPhone} onChange={(e) => setForm({ ...form, guardianPhone: e.target.value })} />
-            </label>
+            <div className="portal-form-group">
+              <label>Guardian Phone Number</label>
+              <input
+                type="text"
+                className="portal-input"
+                placeholder="e.g. +234 809 876 5432"
+                value={form.guardianPhone}
+                onChange={(e) => setForm({ ...form, guardianPhone: e.target.value })}
+              />
+            </div>
           </div>
 
-          <div style={{ marginTop: '20px' }}>
-            <button type="submit" className="btn-primary" disabled={saving}>
+          <div style={{ marginTop: '24px' }}>
+            <button type="submit" className="rebuilt-btn rebuilt-btn-primary" disabled={saving}>
               <Save size={18} /> {saving ? 'Saving...' : 'Save Profile Changes'}
             </button>
           </div>

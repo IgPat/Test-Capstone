@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { Plus, BookOpen, Edit3, Trash2, X } from 'lucide-react';
+import '../auth/RebuiltPages.css';
 
 export default function AdminClasses() {
   const [classes, setClasses] = useState([]);
@@ -83,48 +84,55 @@ export default function AdminClasses() {
   };
 
   return (
-    <div>
-      <div className="toolbar">
+    <div className="rebuilt-page">
+      <header className="rebuilt-page-header">
         <div>
+          <p className="dash-eyebrow"><span /> ACADEMICS & ROSTERS</p>
           <h1>Classes & Subjects</h1>
-          <p className="muted">Manage school classes, student capacity, homerooms, and subject offerings.</p>
+          <p>Manage school classes, student capacity, homerooms, and subject offerings.</p>
         </div>
 
-        <button className="btn-primary" onClick={openCreateModal}>
-          <Plus size={18} /> Add Class
+        <button className="rebuilt-btn-primary" onClick={openCreateModal}>
+          <Plus size={16} /> Add Class
         </button>
-      </div>
+      </header>
 
       {loading ? (
-        <div className="loading">Loading classes...</div>
+        <div className="rebuilt-empty-state">Loading classes…</div>
       ) : error ? (
-        <div className="error">{error}</div>
+        <div className="rebuilt-alert-error">{error}</div>
       ) : classes.length === 0 ? (
-        <div className="card empty-state">No classes created yet.</div>
+        <div className="rebuilt-empty-state">No classes created yet. Click "Add Class" to start.</div>
       ) : (
-        <div className="grid grid-2">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
           {classes.map((c) => (
-            <div key={c._id} className="card">
-              <div className="flex-between" style={{ marginBottom: '10px' }}>
-                <div className="flex">
-                  <BookOpen size={20} className="text-primary" style={{ color: 'var(--primary)' }} />
-                  <h3 style={{ margin: 0 }}>{c.name}</h3>
+            <div key={c._id} className="rebuilt-card" style={{ marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div className="dash-metric-icon tone-green" style={{ width: 32, height: 32, margin: 0 }}>
+                    <BookOpen size={17} />
+                  </div>
+                  <h3 style={{ margin: 0, font: "400 22px/1.2 'DM Serif Display', serif" }}>{c.name}</h3>
                 </div>
-                <div className="flex">
-                  <button className="btn-secondary btn-small" onClick={() => openEditModal(c)}><Edit3 size={14} /></button>
-                  <button className="btn-danger btn-small" onClick={() => handleDelete(c._id)}><Trash2 size={14} /></button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button className="rebuilt-btn-secondary" style={{ padding: '6px 10px' }} onClick={() => openEditModal(c)} title="Edit class">
+                    <Edit3 size={14} />
+                  </button>
+                  <button className="rebuilt-btn-danger" style={{ padding: '6px 10px' }} onClick={() => handleDelete(c._id)} title="Delete class">
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
 
-              <div style={{ fontSize: '.88rem', color: 'var(--ink-soft)', marginBottom: '12px' }}>
-                Homeroom: <strong>{c.homeroom || 'N/A'}</strong> · Enrolled: <strong>{c.students?.length || 0} / {c.capacity}</strong>
+              <div style={{ fontSize: '12px', color: 'var(--portal-muted)', marginBottom: '14px' }}>
+                Homeroom: <strong style={{ color: 'var(--portal-ink)' }}>{c.homeroom || 'N/A'}</strong> · Enrolled: <strong style={{ color: 'var(--portal-ink)' }}>{c.students?.length || 0} / {c.capacity}</strong>
               </div>
 
               <div>
-                <span className="muted" style={{ fontSize: '.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Subjects:</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', color: 'var(--portal-muted)', textTransform: 'uppercase' }}>Subjects:</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
                   {c.subjects?.map((sub, i) => (
-                    <span key={i} className="pill pill-excused">{sub}</span>
+                    <span key={i} className="rebuilt-badge rebuilt-badge-excused">{sub}</span>
                   ))}
                 </div>
               </div>
@@ -135,37 +143,36 @@ export default function AdminClasses() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="rebuilt-modal-overlay">
+          <div className="rebuilt-modal">
+            <div className="rebuilt-modal-head">
               <h2>{editingId ? 'Edit Class' : 'Create New Class'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
+              <button className="rebuilt-modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
 
-            {formErr && <div className="error">{formErr}</div>}
+            {formErr && <div className="rebuilt-alert-error">{formErr}</div>}
 
-            <form onSubmit={handleSubmit}>
-              <label>Class Name
-                <input type="text" required placeholder="e.g. JSS1A" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              </label>
+            <form onSubmit={handleSubmit} className="portal-form" style={{ marginTop: 0 }}>
+              <label>Class Name</label>
+              <input type="text" required placeholder="e.g. JSS1A" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
 
-              <div className="form-row" style={{ marginTop: '10px' }}>
-                <label>Capacity
+              <div className="rebuilt-form-row">
+                <div>
+                  <label>Capacity</label>
                   <input type="number" required min={1} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
-                </label>
-
-                <label>Homeroom
+                </div>
+                <div>
+                  <label>Homeroom</label>
                   <input type="text" placeholder="e.g. Room 12" value={form.homeroom} onChange={(e) => setForm({ ...form, homeroom: e.target.value })} />
-                </label>
+                </div>
               </div>
 
-              <label style={{ marginTop: '10px' }}>Subjects (comma separated)
-                <input type="text" required placeholder="Mathematics, English, Basic Science" value={form.subjectsStr} onChange={(e) => setForm({ ...form, subjectsStr: e.target.value })} />
-              </label>
+              <label className="portal-spaced-label">Subjects (comma separated)</label>
+              <input type="text" required placeholder="Mathematics, English, Basic Science" value={form.subjectsStr} onChange={(e) => setForm({ ...form, subjectsStr: e.target.value })} />
 
-              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">{editingId ? 'Update Class' : 'Create Class'}</button>
+              <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="rebuilt-btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="rebuilt-btn-primary">{editingId ? 'Update Class' : 'Create Class'}</button>
               </div>
             </form>
           </div>

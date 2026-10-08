@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { GraduationCap, Plus, Trash2, X } from 'lucide-react';
+import '../auth/RebuiltPages.css';
 
 export default function AdminGrades() {
   const [classes, setClasses] = useState([]);
@@ -19,8 +20,6 @@ export default function AdminGrades() {
     fetchClasses();
   }, []);
 
-
-
   useEffect(() => {
     if (selectedStudent) {
       fetchStudentGrades(selectedStudent);
@@ -38,14 +37,13 @@ export default function AdminGrades() {
         const subs = first.subjects || [];
         setSubjects(subs);
         setForm((f) => ({ ...f, subject: subs[0] || 'Mathematics' }));
-        fetchStudents(first._id, first); // pass class object directly
+        fetchStudents(first._id, first);
       }
     } catch (e) {
       /* ignore */
     }
   };
 
-  // classObj can be passed directly to avoid reading stale `classes` state
   const fetchStudents = async (cId, classObj) => {
     try {
       const res = await api.get(`/students?classId=${cId}&limit=100`);
@@ -56,7 +54,6 @@ export default function AdminGrades() {
         setSelectedStudent('');
         setGrades([]);
       }
-      // Use the passed classObj first, fall back to searching classes state
       const c = classObj || classes.find((cl) => cl._id === cId);
       if (c) {
         const subs = c.subjects || [];
@@ -71,7 +68,6 @@ export default function AdminGrades() {
   const fetchStudentGrades = async (sProfileId) => {
     try {
       setLoading(true);
-      // ?flat=1 returns a plain array; without it the endpoint returns grouped report-card data
       const res = await api.get(`/grades/student/${sProfileId}`, { flat: '1' });
       setGrades(Array.isArray(res) ? res : []);
     } catch (err) {
@@ -86,7 +82,7 @@ export default function AdminGrades() {
     setMsg({ error: '', success: '' });
     try {
       await api.post('/grades', {
-        student: selectedStudent,   // backend expects 'student', not 'studentId'
+        student: selectedStudent,
         subject: form.subject,
         term: form.term,
         academicYear: form.academicYear,
@@ -111,35 +107,47 @@ export default function AdminGrades() {
   };
 
   return (
-    <div>
-      <div className="toolbar">
+    <div className="rebuilt-page">
+      <header className="rebuilt-page-header">
         <div>
+          <p className="dash-eyebrow"><span /> ACADEMICS & ASSESSMENTS</p>
           <h1>Grade Entry</h1>
-          <p className="muted">Enter and manage term subject scores for students.</p>
+          <p>Enter and manage term subject scores for students.</p>
         </div>
 
-        <button className="btn-primary" onClick={() => { setMsg({ error: '', success: '' }); setShowModal(true); }} disabled={!selectedStudent}>
-          <Plus size={18} /> Record Grade
+        <button className="rebuilt-btn-primary" onClick={() => { setMsg({ error: '', success: '' }); setShowModal(true); }} disabled={!selectedStudent}>
+          <Plus size={16} /> Record Grade
         </button>
-      </div>
+      </header>
 
-      <div className="card toolbar" style={{ background: '#fff', marginBottom: '16px' }}>
-        <div className="filters">
-          <label style={{ margin: 0 }}>Class:
-            <select value={selectedClass} onChange={(e) => {
-              const cId = e.target.value;
-              setSelectedClass(cId);
-              const c = classes.find((cl) => cl._id === cId);
-              fetchStudents(cId, c);
-            }}>
+      <div className="rebuilt-filter-bar">
+        <div className="rebuilt-filter-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600 }}>
+            Class:
+            <select
+              value={selectedClass}
+              onChange={(e) => {
+                const cId = e.target.value;
+                setSelectedClass(cId);
+                const c = classes.find((cl) => cl._id === cId);
+                fetchStudents(cId, c);
+              }}
+              style={{ minWidth: 150 }}
+            >
               {classes.map((c) => (
                 <option key={c._id} value={c._id}>{c.name}</option>
               ))}
             </select>
           </label>
 
-          <label style={{ margin: 0 }}>Student:
-            <select value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)} disabled={!students.length}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600 }}>
+            Student:
+            <select
+              value={selectedStudent}
+              onChange={(e) => setSelectedStudent(e.target.value)}
+              disabled={!students.length}
+              style={{ minWidth: 220 }}
+            >
               {students.length === 0 ? (
                 <option value="">No students in class</option>
               ) : (
@@ -153,14 +161,14 @@ export default function AdminGrades() {
       </div>
 
       {loading ? (
-        <div className="loading">Loading grades...</div>
+        <div className="rebuilt-empty-state">Loading grades…</div>
       ) : !selectedStudent ? (
-        <div className="card empty-state">Select a class and student to view or add grades.</div>
+        <div className="rebuilt-empty-state">Select a class and student to view or add grades.</div>
       ) : grades.length === 0 ? (
-        <div className="card empty-state">No grades recorded for this student yet.</div>
+        <div className="rebuilt-empty-state">No grades recorded for this student yet.</div>
       ) : (
-        <div className="table-wrap">
-          <table>
+        <div className="rebuilt-table-wrap">
+          <table className="rebuilt-table">
             <thead>
               <tr>
                 <th>Subject</th>
@@ -174,6 +182,7 @@ export default function AdminGrades() {
             <tbody>
               {grades.map((g) => {
                 const pct = Math.round((g.score / g.maxScore) * 100);
+                const badgeClass = pct >= 70 ? 'rebuilt-badge-active' : pct >= 50 ? 'rebuilt-badge-partial' : 'rebuilt-badge-inactive';
                 return (
                   <tr key={g._id}>
                     <td><strong>{g.subject}</strong></td>
@@ -181,12 +190,14 @@ export default function AdminGrades() {
                     <td>{g.academicYear}</td>
                     <td>{g.score} / {g.maxScore}</td>
                     <td>
-                      <span className={`pill ${pct >= 70 ? 'pill-active' : pct >= 50 ? 'pill-late' : 'pill-inactive'}`}>
+                      <span className={`rebuilt-badge ${badgeClass}`}>
                         {pct}%
                       </span>
                     </td>
                     <td>
-                      <button className="btn-danger btn-small" onClick={() => handleDelete(g._id)}><Trash2 size={14} /></button>
+                      <button className="rebuilt-btn-danger" style={{ padding: '6px 9px' }} onClick={() => handleDelete(g._id)} title="Delete grade">
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
                 );
@@ -198,59 +209,60 @@ export default function AdminGrades() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="rebuilt-modal-overlay">
+          <div className="rebuilt-modal">
+            <div className="rebuilt-modal-head">
               <h2>Record Grade</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
+              <button className="rebuilt-modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
 
-            {msg.error && <div className="error">{msg.error}</div>}
+            {msg.error && <div className="rebuilt-alert-error">{msg.error}</div>}
 
-            <form onSubmit={handleCreateGrade}>
-              <label>Subject
-                <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}>
-                  {subjects.length > 0 ? (
-                    subjects.map((sub, i) => (
-                      <option key={i} value={sub}>{sub}</option>
-                    ))
-                  ) : (
-                    <>
-                      <option value="Mathematics">Mathematics</option>
-                      <option value="English">English</option>
-                      <option value="Basic Science">Basic Science</option>
-                    </>
-                  )}
-                </select>
-              </label>
+            <form onSubmit={handleCreateGrade} className="portal-form" style={{ marginTop: 0 }}>
+              <label>Subject</label>
+              <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}>
+                {subjects.length > 0 ? (
+                  subjects.map((sub, i) => (
+                    <option key={i} value={sub}>{sub}</option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="English">English</option>
+                    <option value="Basic Science">Basic Science</option>
+                  </>
+                )}
+              </select>
 
-              <div className="form-row" style={{ marginTop: '10px' }}>
-                <label>Score
+              <div className="rebuilt-form-row">
+                <div>
+                  <label>Score</label>
                   <input type="number" required min={0} max={form.maxScore} value={form.score} onChange={(e) => setForm({ ...form, score: e.target.value })} />
-                </label>
-
-                <label>Max Score
+                </div>
+                <div>
+                  <label>Max Score</label>
                   <input type="number" required min={1} value={form.maxScore} onChange={(e) => setForm({ ...form, maxScore: e.target.value })} />
-                </label>
+                </div>
               </div>
 
-              <div className="form-row" style={{ marginTop: '10px' }}>
-                <label>Term
+              <div className="rebuilt-form-row">
+                <div>
+                  <label>Term</label>
                   <select value={form.term} onChange={(e) => setForm({ ...form, term: e.target.value })}>
                     <option value="Term 1">Term 1</option>
                     <option value="Term 2">Term 2</option>
                     <option value="Term 3">Term 3</option>
                   </select>
-                </label>
-
-                <label>Academic Year
+                </div>
+                <div>
+                  <label>Academic Year</label>
                   <input type="text" required value={form.academicYear} onChange={(e) => setForm({ ...form, academicYear: e.target.value })} />
-                </label>
+                </div>
               </div>
 
-              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Grade</button>
+              <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="rebuilt-btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="rebuilt-btn-primary">Save Grade</button>
               </div>
             </form>
           </div>

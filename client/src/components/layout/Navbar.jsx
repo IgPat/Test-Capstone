@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import { fmtDate } from "../../utils/formatters";
-import { Bell, LogOut, School, CheckCheck } from "lucide-react";
+import { Bell, LogOut, GraduationCap, CheckCheck } from "lucide-react";
+import "../../pages/auth/RebuiltPages.css";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -62,64 +63,79 @@ export default function Navbar() {
     user?.role === "admin" ? "/admin/dashboard" : "/student/dashboard";
 
   return (
-    <header className="navbar">
-      <Link to={dashboardPath} className="brand">
-        <School
-          className="w-5 h-5 text-primary"
-          style={{ color: "var(--primary)" }}
-        />
-        <span>School Management System</span>
+    <header className="rebuilt-navbar">
+      <Link to={dashboardPath} className="rebuilt-navbar-brand">
+        <span className="rebuilt-navbar-brand-mark">
+          <GraduationCap size={20} />
+        </span>
+        <span>
+          EduCore<span className="period">.</span>
+        </span>
       </Link>
 
-      <div className="navbar-right">
-        <div className="bell-container">
+      <div className="rebuilt-navbar-right">
+        <div className="rebuilt-notif-container">
           <button
-            className="bell-btn"
+            className="rebuilt-notif-btn"
             onClick={toggleNotifications}
             title="Notifications"
+            aria-label="Notifications"
           >
             <Bell size={18} />
-            {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
+            {unreadCount > 0 && <span className="rebuilt-notif-badge">{unreadCount}</span>}
           </button>
 
           {showNotif && (
-            <div className="notif-panel">
+            <div className="rebuilt-notif-panel">
               <div
-                className="flex-between"
-                style={{ padding: "6px 8px", marginBottom: "8px" }}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "10px",
+                  paddingBottom: "8px",
+                  borderBottom: "1px solid #edf0eb",
+                }}
               >
-                <strong style={{ fontSize: ".9rem" }}>Notifications</strong>
+                <strong style={{ fontSize: "13px", color: "var(--portal-ink)" }}>
+                  Notifications
+                </strong>
                 {unreadCount > 0 && (
                   <button
-                    className="btn-link"
                     onClick={handleMarkAllRead}
                     style={{
-                      fontSize: ".78rem",
+                      border: 0,
+                      background: "transparent",
+                      color: "var(--portal-green)",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       gap: "4px",
                     }}
                   >
-                    <CheckCheck size={14} /> Mark all read
+                    <CheckCheck size={13} /> Mark all read
                   </button>
                 )}
               </div>
 
               {loadingNotif ? (
-                <div className="loading">Loading notifications…</div>
+                <div style={{ fontSize: "12px", color: "var(--portal-muted)", padding: "12px 0" }}>
+                  Loading notifications…
+                </div>
               ) : notifications.length === 0 ? (
-                <div className="empty-state">No notifications yet.</div>
+                <div style={{ fontSize: "12px", color: "var(--portal-muted)", padding: "12px 0" }}>
+                  No notifications yet.
+                </div>
               ) : (
                 notifications.map((n) => (
                   <div
                     key={n._id}
-                    className={`notif-item ${n.isRead ? "" : "unread"}`}
+                    className={`rebuilt-notif-item ${n.isRead ? "" : "unread"}`}
                   >
                     <div>{n.message}</div>
-                    <div
-                      className="muted"
-                      style={{ fontSize: ".74rem", marginTop: "4px" }}
-                    >
+                    <div style={{ fontSize: "10px", color: "#8fa095", marginTop: "3px" }}>
                       {fmtDate(n.createdAt)}
                     </div>
                   </div>
@@ -129,15 +145,15 @@ export default function Navbar() {
           )}
         </div>
 
-        <span className="user-chip">
-          {user?.name} ·{" "}
-          <strong style={{ textTransform: "capitalize" }}>{user?.role}</strong>
+        <span className="rebuilt-user-chip">
+          {user?.name} · <strong>{user?.role}</strong>
         </span>
 
-        <button className="btn-secondary" onClick={handleLogout}>
-          <LogOut size={16} /> Log out
+        <button className="rebuilt-logout-btn" onClick={handleLogout}>
+          <LogOut size={15} /> Log out
         </button>
       </div>
     </header>
   );
 }
+

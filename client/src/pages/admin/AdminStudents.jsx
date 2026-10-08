@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { UserPlus, Search, Edit3, Key, Trash2, X } from 'lucide-react';
+import '../auth/RebuiltPages.css';
 
 export default function AdminStudents() {
   const [students, setStudents] = useState([]);
@@ -137,32 +138,32 @@ export default function AdminStudents() {
   const totalPages = Math.ceil(total / limit) || 1;
 
   return (
-    <div>
-      <div className="toolbar">
+    <div className="rebuilt-page">
+      <header className="rebuilt-page-header">
         <div>
+          <p className="dash-eyebrow"><span /> STUDENT RECORDS</p>
           <h1>Student Management</h1>
-          <p className="muted">View, create, edit, and reset passwords for students.</p>
+          <p>View, create, edit, and reset passwords for students.</p>
         </div>
 
-        <button className="btn-primary" onClick={() => { setFormMsg({ error: '', success: '' }); setShowAddModal(true); }}>
-          <UserPlus size={18} /> Add Student
+        <button className="rebuilt-btn-primary" onClick={() => { setFormMsg({ error: '', success: '' }); setShowAddModal(true); }}>
+          <UserPlus size={16} /> Add Student
         </button>
-      </div>
+      </header>
 
-      <div className="card toolbar" style={{ marginBottom: '16px', background: '#fff' }}>
-        <div className="filters">
-          <div style={{ position: 'relative' }}>
+      <div className="rebuilt-filter-bar">
+        <div className="rebuilt-filter-group">
+          <div className="rebuilt-search-input">
+            <Search size={15} />
             <input
               type="text"
-              placeholder="Search by name or admission..."
+              placeholder="Search by name or admission…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              style={{ paddingLeft: '34px' }}
             />
-            <Search size={16} style={{ position: 'absolute', left: '10px', top: '13px', color: 'var(--ink-soft)' }} />
           </div>
 
-          <select value={classFilter} onChange={(e) => { setClassFilter(e.target.value); setPage(1); }}>
+          <select value={classFilter} onChange={(e) => { setClassFilter(e.target.value); setPage(1); }} style={{ minWidth: 160 }}>
             <option value="">All Classes</option>
             {classes.map((c) => (
               <option key={c._id} value={c._id}>{c.name}</option>
@@ -170,18 +171,20 @@ export default function AdminStudents() {
           </select>
         </div>
 
-        <span className="muted" style={{ fontSize: '.88rem' }}>Total: <strong>{total}</strong> students</span>
+        <span style={{ fontSize: '12px', color: 'var(--portal-muted)' }}>
+          Total: <strong style={{ color: 'var(--portal-ink)' }}>{total}</strong> students
+        </span>
       </div>
 
       {loading ? (
-        <div className="loading">Loading students...</div>
+        <div className="rebuilt-empty-state">Loading student records…</div>
       ) : error ? (
-        <div className="error">{error}</div>
+        <div className="rebuilt-alert-error">{error}</div>
       ) : students.length === 0 ? (
-        <div className="card empty-state">No students found.</div>
+        <div className="rebuilt-empty-state">No students found matching your criteria.</div>
       ) : (
-        <div className="table-wrap">
-          <table>
+        <div className="rebuilt-table-wrap">
+          <table className="rebuilt-table">
             <thead>
               <tr>
                 <th>Adm. No</th>
@@ -202,19 +205,19 @@ export default function AdminStudents() {
                   <td>{s.classId?.name || '—'}</td>
                   <td style={{ textTransform: 'capitalize' }}>{s.gender}</td>
                   <td>
-                    <span className={`pill ${s.status === 'active' ? 'pill-active' : 'pill-inactive'}`}>
+                    <span className={`rebuilt-badge ${s.status === 'active' ? 'rebuilt-badge-active' : 'rebuilt-badge-inactive'}`}>
                       {s.status}
                     </span>
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button className="btn-secondary btn-small" onClick={() => openEditModal(s)} title="Edit">
+                      <button className="rebuilt-btn-secondary" style={{ padding: '6px 9px' }} onClick={() => openEditModal(s)} title="Edit Student">
                         <Edit3 size={14} />
                       </button>
-                      <button className="btn-secondary btn-small" onClick={() => openResetModal(s)} title="Reset Password">
+                      <button className="rebuilt-btn-secondary" style={{ padding: '6px 9px' }} onClick={() => openResetModal(s)} title="Reset Password">
                         <Key size={14} />
                       </button>
-                      <button className="btn-danger btn-small" onClick={() => handleDelete(s._id)} title="Delete">
+                      <button className="rebuilt-btn-danger" style={{ padding: '6px 9px' }} onClick={() => handleDelete(s._id)} title="Delete Profile">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -228,7 +231,7 @@ export default function AdminStudents() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="pagination">
+        <div className="rebuilt-pagination">
           <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button key={p} className={p === page ? 'active' : ''} onClick={() => setPage(p)}>{p}</button>
@@ -239,54 +242,51 @@ export default function AdminStudents() {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="rebuilt-modal-overlay">
+          <div className="rebuilt-modal">
+            <div className="rebuilt-modal-head">
               <h2>Add New Student</h2>
-              <button className="modal-close" onClick={() => setShowAddModal(false)}><X size={20} /></button>
+              <button className="rebuilt-modal-close" onClick={() => setShowAddModal(false)}><X size={20} /></button>
             </div>
 
-            {formMsg.error && <div className="error">{formMsg.error}</div>}
+            {formMsg.error && <div className="rebuilt-alert-error">{formMsg.error}</div>}
 
-            <form onSubmit={handleAddSubmit}>
-              <label>Full Name
-                <input type="text" required placeholder="e.g. John Smith" value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} />
-              </label>
+            <form onSubmit={handleAddSubmit} className="portal-form" style={{ marginTop: 0 }}>
+              <label>Full Name</label>
+              <input type="text" required placeholder="e.g. John Smith" value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} />
 
-              <label style={{ marginTop: '10px' }}>Email Address
-                <input type="email" required placeholder="e.g. john@school.test" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
-              </label>
+              <label className="portal-spaced-label">Email Address</label>
+              <input type="email" required placeholder="e.g. john@school.test" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
 
-              <div className="form-row" style={{ marginTop: '10px' }}>
-                <label>Gender
+              <div className="rebuilt-form-row">
+                <div>
+                  <label>Gender</label>
                   <select value={addForm.gender} onChange={(e) => setAddForm({ ...addForm, gender: e.target.value })}>
                     <option value="female">Female</option>
                     <option value="male">Male</option>
                   </select>
-                </label>
+                </div>
 
-                <label>Class
+                <div>
+                  <label>Class</label>
                   <select value={addForm.classId} onChange={(e) => setAddForm({ ...addForm, classId: e.target.value })}>
                     <option value="">Select Class</option>
                     {classes.map((c) => (
                       <option key={c._id} value={c._id}>{c.name}</option>
                     ))}
                   </select>
-                </label>
+                </div>
               </div>
-              <div className="form-row" style={{ marginTop: '10px' }}>
-                <label>Admission Number
-                  <input type="text" required placeholder="e.g. ADM001" value={addForm.admissionNumber} onChange={(e) => setAddForm({ ...addForm, admissionNumber: e.target.value })} />
-                </label>
-                </div>                
 
-              <label style={{ marginTop: '10px' }}>Initial Password
-                <input type="password" required placeholder="At least 6 characters" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} />
-              </label>
+              <label className="portal-spaced-label">Admission Number</label>
+              <input type="text" required placeholder="e.g. ADM001" value={addForm.admissionNumber} onChange={(e) => setAddForm({ ...addForm, admissionNumber: e.target.value })} />
 
-              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Create Student</button>
+              <label className="portal-spaced-label">Initial Password</label>
+              <input type="password" required placeholder="At least 6 characters" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} />
+
+              <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="rebuilt-btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="rebuilt-btn-primary">Create Student</button>
               </div>
             </form>
           </div>
@@ -295,58 +295,54 @@ export default function AdminStudents() {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="rebuilt-modal-overlay">
+          <div className="rebuilt-modal">
+            <div className="rebuilt-modal-head">
               <h2>Edit Student</h2>
-              <button className="modal-close" onClick={() => setShowEditModal(false)}><X size={20} /></button>
+              <button className="rebuilt-modal-close" onClick={() => setShowEditModal(false)}><X size={20} /></button>
             </div>
 
-            {formMsg.error && <div className="error">{formMsg.error}</div>}
+            {formMsg.error && <div className="rebuilt-alert-error">{formMsg.error}</div>}
 
-            <form onSubmit={handleEditSubmit}>
-              <label>Full Name
-                <input type="text" required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-              </label>
+            <form onSubmit={handleEditSubmit} className="portal-form" style={{ marginTop: 0 }}>
+              <label>Full Name</label>
+              <input type="text" required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
 
-              <label style={{ marginTop: '10px' }}>Email Address
-                <input type="email" required value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-              </label>
+              <label className="portal-spaced-label">Email Address</label>
+              <input type="email" required value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
 
-              <div className="form-row" style={{ marginTop: '10px' }}>
-                <label>Gender
+              <div className="rebuilt-form-row">
+                <div>
+                  <label>Gender</label>
                   <select value={editForm.gender} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}>
                     <option value="female">Female</option>
                     <option value="male">Male</option>
                   </select>
-                </label>
+                </div>
 
-                <label>Class
+                <div>
+                  <label>Class</label>
                   <select value={editForm.classId} onChange={(e) => setEditForm({ ...editForm, classId: e.target.value })}>
                     <option value="">Select Class</option>
                     {classes.map((c) => (
                       <option key={c._id} value={c._id}>{c.name}</option>
                     ))}
                   </select>
-                </label>
+                </div>
               </div>
 
-              <div className="form-row" style={{ marginTop: '10px' }}>
-                <label>Admission Number
-                  <input type="text" required placeholder="e.g. ADM001" value={editForm.admissionNumber} onChange={(e) => setEditForm({ ...editForm, admissionNumber: e.target.value })} />
-                </label>
-              </div>
+              <label className="portal-spaced-label">Admission Number</label>
+              <input type="text" required value={editForm.admissionNumber} onChange={(e) => setEditForm({ ...editForm, admissionNumber: e.target.value })} />
 
-              <label style={{ marginTop: '10px' }}>Status
-                <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </label>
+              <label className="portal-spaced-label">Status</label>
+              <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
 
-              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Changes</button>
+              <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="rebuilt-btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button type="submit" className="rebuilt-btn-primary">Save Changes</button>
               </div>
             </form>
           </div>
@@ -355,28 +351,30 @@ export default function AdminStudents() {
 
       {/* Password Reset Modal */}
       {showResetModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="rebuilt-modal-overlay">
+          <div className="rebuilt-modal">
+            <div className="rebuilt-modal-head">
               <h2>Reset Password</h2>
-              <button className="modal-close" onClick={() => setShowResetModal(false)}><X size={20} /></button>
+              <button className="rebuilt-modal-close" onClick={() => setShowResetModal(false)}><X size={20} /></button>
             </div>
 
-            <p className="muted">Generate a new temporary password for <strong>{resetData.studentName}</strong>.</p>
+            <p style={{ color: 'var(--portal-muted)', fontSize: '13px' }}>
+              Generate a new temporary password for <strong>{resetData.studentName}</strong>.
+            </p>
 
-            {formMsg.error && <div className="error">{formMsg.error}</div>}
+            {formMsg.error && <div className="rebuilt-alert-error">{formMsg.error}</div>}
 
             {resetData.newPassword ? (
-              <div className="success-msg" style={{ margin: '16px 0' }}>
+              <div className="rebuilt-alert-success" style={{ margin: '16px 0' }}>
                 <strong>New Password Generated:</strong>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '6px' }}>{resetData.newPassword}</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '4px' }}>{resetData.newPassword}</div>
               </div>
             ) : null}
 
-            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button type="button" className="btn-secondary" onClick={() => setShowResetModal(false)}>Close</button>
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" className="rebuilt-btn-secondary" onClick={() => setShowResetModal(false)}>Close</button>
               {!resetData.newPassword && (
-                <button type="button" className="btn-primary" onClick={handleResetSubmit}>Generate Password</button>
+                <button type="button" className="rebuilt-btn-primary" onClick={handleResetSubmit}>Generate Password</button>
               )}
             </div>
           </div>

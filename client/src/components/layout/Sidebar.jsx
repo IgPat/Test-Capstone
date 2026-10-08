@@ -11,6 +11,7 @@ import {
   Megaphone,
   UserCheck,
 } from 'lucide-react';
+import '../../pages/auth/RebuiltPages.css';
 
 const ADMIN_LINKS = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -36,20 +37,22 @@ export default function Sidebar() {
   const links = user?.role === 'admin' ? ADMIN_LINKS : STUDENT_LINKS;
 
   return (
-    <nav className="sidebar">
+    <aside className="rebuilt-sidebar">
       {links.map((link) => {
         const Icon = link.icon;
         return (
           <NavLink
             key={link.path}
             to={link.path}
-            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) =>
+              `rebuilt-sidebar-link ${isActive ? 'active' : ''}`
+            }
           >
             <Icon size={18} />
             <span>{link.label}</span>
           </NavLink>
         );
       })}
-    </nav>
+    </aside>
   );
 }

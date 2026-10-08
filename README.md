@@ -1,125 +1,233 @@
-# School Management System (SMS)
+# 🎓 School Management System (SMS)
 
-A full-stack School Management System built with **Node.js, Express, MongoDB (Mongoose)** on the
-backend and **plain HTML, CSS and vanilla JavaScript** on the frontend — no framework or build step
-required for the client.
+A full-stack, enterprise-grade **School Management System** built with **React 19**, **Vite**, **Node.js**, **Express**, **MongoDB**, and **Paystack**. Features a public marketing portal, role-based dashboards for **Admins** and **Students**, automated financial invoicing, Paystack online payment integration, digital report cards, attendance tracking, and real-time notification fanout.
 
-## Tech stack
+---
 
-| Layer          | Technology |
-|-----------------|------------|
-| Frontend        | HTML5, CSS3, vanilla JavaScript (`fetch` + `localStorage`), Chart.js (CDN, admin charts) |
-| Backend         | Node.js, Express.js |
-| Database        | MongoDB + Mongoose |
-| Auth            | JWT + bcrypt, role-based middleware |
-| Deployment      | Single Express server serves both the REST API and the static frontend |
+## 🚀 Tech Stack Overview
 
-## Project structure
+| Layer | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | React 19, Vite 8, React Router v7 | High-performance Single Page Application (SPA) |
+| **UI & Styling** | Custom CSS3, Lucide React Icons | Responsive glassmorphic design system |
+| **Data Visualization**| Chart.js, `react-chartjs-2` | Interactive administrative & student analytical charts |
+| **Backend API** | Node.js, Express.js (CommonJS) | RESTful API architecture with modular controllers & routes |
+| **Database** | MongoDB & Mongoose ORM | Document database with schema validation & indexes |
+| **Authentication** | JWT (JSON Web Tokens) & `bcryptjs` | Secure role-based authentication (`admin`, `student`) |
+| **Payments** | Paystack (`@paystack/inline-js`) | Online fee payments, transaction logging & verification |
+| **Email & Files** | Nodemailer, Multer | Automated email notifications & profile image uploads |
+
+---
+
+## ✨ Key Features
+
+### 🌐 Public Landing Portal
+- **Modern Landing Page**: Hero section, service offerings, feature grids, testimonials, and interactive FAQs.
+- **Informational Pages**: Dedicated **About Us**, **Contact Us**, and **Privacy Policy** pages.
+
+### 🔐 Authentication & Role-Based Access Control (RBAC)
+- **Student Self-Registration**: Automated profile setup upon student signup.
+- **Admin Privilege System**: Admin accounts managed via secure seeding or admin delegation.
+- **Protected Routing**: Frontend wrapper (`ProtectedRoute.jsx`) and backend middleware (`protect`, `requireRole`, `requireAdminOrOwner`) enforcing authorization.
+
+### 👨‍🎓 Student & Class Management
+- **Admin Student Management**: Full CRUD operations with search, class filtering, status toggling, and pagination (`GET /api/students`).
+- **Class Administration**: Manage classes, track subjects, and handle student enrollments/unenrollments with synchronized bidirectional references.
+- **Student Profile Self-Service**: Students can update personal bio, contact info, and upload avatar photos.
+
+### 📋 Attendance Register System
+- **Bulk Attendance Entry**: Admin/teacher can mark attendance for an entire class in a single batch request (`bulkWrite` upsert per student, class, and date).
+- **Student Attendance Metrics**: Automated calculation of attendance percentages and historical logs on student dashboards.
+
+### 📊 Gradebook & Digital Report Cards
+- **Grade Entry**: Administrative input of subject scores per term.
+- **Auto-Calculated Report Cards**: Server-side aggregation of subject scores, term averages, and letter grades (A–F).
+
+### 💳 Financial Management & Paystack Payment Gateway
+- **Invoice Generation**: Itemized invoice creation for tuition, fees, and activities with auto-calculated total amounts.
+- **Paystack Integration**: Direct online payment via Paystack inline modal in the student portal.
+- **Payment Tracking**: Multi-status tracking (`unpaid`, `partial`, `paid`) with transaction history logging (`Payment` model).
+
+### 📢 Announcements & In-App Notifications
+- **Targeted Announcements**: Broadcast school-wide or class-specific announcements.
+- **Automatic Notification Fanout**: System automatically pushes notifications to affected students upon invoice issuance or announcement publication.
+- **Notification Center**: Interactive bell widget with unread counters and mark-as-read controls.
+
+### 📈 Analytics & Dashboards
+- **Admin Dashboard**: Visual stat cards and charts showing enrollment metrics, financial collections, and attendance trends.
+- **Student Dashboard**: Quick access summary of GPA, pending fee balances, recent attendance, and latest announcements.
+
+---
+
+## 📁 Project Structure
 
 ```
 sms/
-  server/                 Express API
-    config/db.js          Mongoose connection
-    models/                User, StudentProfile, Class, Attendance, Grade, Invoice, Payment,
-                            Announcement, Notification
-    middleware/            auth.js (JWT check), roleCheck.js (role / ownership checks)
-    controllers/            One controller per resource
-    routes/                 One router per resource, mounted under /api/*
-    server.js               App entrypoint — serves the API AND the static /public frontend
-    seed.js                 Creates a demo Admin + Student account
-    .env.example
-  public/                 Vanilla HTML/CSS/JS frontend (served by Express as static files)
-    index.html             Redirects to /login.html or the right dashboard
-    login.html, register.html, forgot-password.html
-    admin/                  dashboard, students, classes, attendance, grades, invoices, announcements
-    student/                dashboard, profile, attendance, grades, invoices, announcements
-    css/styles.css          Shared design system (cards, tables, forms, pills, modals)
-    js/api.js               fetch() wrapper that attaches the JWT and handles 401s
-    js/auth.js               Session helpers (getCurrentUser, requireAuth, logout, formatters)
-    js/shell.js              Renders the navbar + role-based sidebar + notification bell on every page
+├── client/                      # React 19 + Vite Frontend SPA
+│   ├── public/                  # Static public assets
+│   ├── src/
+│   │   ├── assets/              # Logos & media files
+│   │   ├── components/          # Shared components & UI layouts
+│   │   │   ├── layout/          # AppLayout, Navbar, Sidebar, ProtectedRoute
+│   │   │   └── Payment.jsx      # Paystack inline payment trigger
+│   │   ├── context/             # AuthContext (global authentication state)
+│   │   ├── pages/
+│   │   │   ├── admin/           # Admin pages (Dash, Students, Classes, Attendance, Grades, Invoices, Announcements)
+│   │   │   ├── auth/            # Auth pages (Login, Register, ForgotPassword)
+│   │   │   ├── landing/         # Public pages (Landing2, AboutUs, ContactUs, PrivacyPolicy)
+│   │   │   └── student/         # Student pages (Dash, Profile, Attendance, Grades, Invoices, Announcements)
+│   │   ├── services/            # Axios API instance with JWT interceptors
+│   │   ├── App.jsx              # Main router & page routes configuration
+│   │   └── main.jsx             # React entrypoint
+│   ├── package.json             # Frontend dependencies & scripts
+│   └── vite.config.js           # Vite configuration
+│
+└── server/                      # Node.js + Express REST API Backend
+    ├── config/                  # Database configuration (`db.js`)
+    ├── controllers/             # Business logic controllers per resource
+    ├── middleware/              # Auth (`auth.js`) & Role Check (`roleCheck.js`)
+    ├── models/                  # Mongoose Schemas (User, StudentProfile, Class, Attendance, Grade, Invoice, Payment, Announcement, Notification)
+    ├── routes/                  # Express API route declarations
+    ├── services/                # External integration services (`paystackService.js`)
+    ├── uploads/                 # Uploaded static media storage (avatars)
+    ├── seed.js                  # Database seeding script for demo accounts
+    ├── server.js                # Express app entrypoint & static file server
+    └── package.json             # Backend dependencies & scripts
 ```
 
-## Getting started
+---
 
-### 1. Install MongoDB access
-Create a free cluster at [MongoDB Atlas](https://www.mongodb.com/atlas) (or run MongoDB locally) and
-grab a connection string.
+## 🛠️ Getting Started
 
-### 2. Configure environment variables
-```bash
-cd server
-cp .env.example .env
-# then edit .env and set MONGO_URI and JWT_SECRET
-```
+### 1. Prerequisites
+- **Node.js**: `v18.x` or higher
+- **MongoDB**: Local MongoDB instance or free cluster on [MongoDB Atlas](https://www.mongodb.com/atlas)
 
-### 3. Install dependencies & seed demo accounts
-```bash
-npm install
-npm run seed
-```
-This creates:
-- **Admin:** `admin@school.test` / `Admin123!`
-- **Student:** `student@school.test` / `Student123!` (enrolled in class `JSS1A`)
+---
 
-### 4. Run the app
-```bash
-npm run dev      # nodemon, restarts on file changes
-# or
-npm start
-```
-Open **http://localhost:5000** — Express serves the API under `/api/*` and the HTML/CSS/JS
-frontend from `/public` on the same origin, so there's nothing else to start or configure.
+### 2. Backend Setup (`/server`)
 
-## How authentication works
+1. **Navigate to the server directory**:
+   ```bash
+   cd server
+   ```
 
-1. `POST /api/auth/register` (public) creates a **student** account + profile. Admin accounts are
-   only created by seeding or by an existing admin (there's no public "become admin" endpoint).
-2. `POST /api/auth/login` returns a JWT, stored in `localStorage` as `sms_token`.
-3. Every subsequent request goes through `js/api.js`, which attaches
-   `Authorization: Bearer <token>`.
-4. Every protected page calls `requireAuth('admin' | 'student')` at the top, which redirects to
-   `/login.html` if there's no session, or to the correct dashboard if the role doesn't match.
-5. On the server, `middleware/auth.js` verifies the JWT and loads `req.user`; `middleware/roleCheck.js`
-   then enforces `admin`-only routes and "admin or the resource owner" routes (e.g. a student can
-   view/edit their own profile, attendance, grades and invoices, but nothing else).
-6. **Forgot password:** there's no email step. `forgot-password.html` explains that an admin resets
-   the student's password from the Students page (`PUT /api/students/:id/reset-password`), which
-   generates a new temporary password to hand back to the student — the "minimum" flow called for
-   in the requirements.
+2. **Install backend dependencies**:
+   ```bash
+   npm install
+   ```
 
-## Role permissions (enforced server-side, mirrored in the UI)
+3. **Configure Environment Variables**:
+   Create a `.env` file in the `server` directory (or copy `.env.example`):
+   ```env
+   PORT=5000
+   MONGO_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/sms_db?retryWrites=true&w=majority
+   JWT_SECRET=your_super_secret_jwt_key_here
+   CLIENT_ORIGIN=http://localhost:5173
+   PAYSTACK_SECRET_KEY=sk_test_xxxxxx
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=your_email@gmail.com
+   EMAIL_PASS=your_email_password
+   ```
 
-| Capability                     | Admin | Student |
-|---------------------------------|-------|---------|
-| Register / log in                | ✅ (seeded) | ✅ (self-register) |
-| Manage students (CRUD)           | ✅ full | View & edit own profile (limited fields) only |
-| Manage classes                   | ✅ full | View only (their enrolled class) |
-| Mark attendance                  | ✅ per class/date | View own attendance & % only |
-| Enter / edit grades              | ✅ full | View own report card only |
-| Manage fees & invoices           | ✅ create invoices, record any payment | View own balance/history, simulate payment on own invoice only |
-| Post announcements               | ✅ create/edit/delete | View only |
-| Notifications                    | Sends implicitly via actions above | Receive + mark read |
-| Reports & analytics              | School-wide dashboard | Personal dashboard only |
+4. **Seed Initial Database Accounts**:
+   ```bash
+   npm run seed
+   ```
+   *Creates initial Admin & Student accounts listed below.*
 
-## Notable implementation details
+5. **Start Development Backend Server**:
+   ```bash
+   npm run dev
+   ```
+   *The server runs on **http://localhost:5000**.*
 
-- **Attendance** is upserted per `(student, classId, date)` so re-marking a day overwrites rather
-  than duplicates.
-- **Grades** are grouped into a report card per term on the fly, with an auto-computed average and
-  letter grade (A–F).
-- **Invoices** auto-calculate `status` (`unpaid` / `partial` / `paid`) from `amountPaid` vs
-  `totalAmount`; payments are logged separately so there's a full payment history.
-- **Notifications** fan out automatically when an invoice is issued or an announcement is posted.
-- **Pagination & search** on the admin Students table hits `GET /api/students?page=&limit=&search=&classId=&status=`.
+---
 
-## Deployment
+### 3. Frontend Setup (`/client`)
 
-- **Simplest:** deploy the whole `server/` folder (which now also serves `public/`) to Render,
-  Railway, or any Node host, pointed at your MongoDB Atlas cluster. One URL for everything.
-- **Split deployment:** you can still host `public/` separately (Netlify/Vercel) — just edit the
-  `API_BASE` fallback in `public/js/api.js` to point at your deployed API's URL.
+1. **Navigate to the client directory**:
+   ```bash
+   cd client
+   ```
 
-## Stretch ideas (not built, called out in the original PRD)
+2. **Install frontend dependencies**:
+   ```bash
+   npm install
+   ```
 
-Teacher/Parent roles, real email delivery via Nodemailer, PDF export of report cards/invoices,
-Socket.io real-time notifications, dark mode, automated tests.
+3. **Configure Environment Variables** *(Optional)*:
+   Create a `.env` file in the `client` directory:
+   ```env
+   VITE_API_URL=http://localhost:5000/api
+   ```
+
+4. **Start Development Frontend Server**:
+   ```bash
+   npm run dev
+   ```
+   *The client app runs on **http://localhost:5173**.*
+
+---
+
+## 🔑 Demo Login Credentials
+
+After running `npm run seed`, log in using the pre-seeded accounts:
+
+| Role | Email | Password | Assigned Details |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin@school.test` | `Admin123!` | Full administrative access |
+| **Student** | `student@school.test` | `Student123!` | Enrolled in Class `JSS1A` |
+
+---
+
+## 📡 API Endpoint Reference
+
+| Endpoint | Method | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/auth/register` | `POST` | Public | Register a new student account & profile |
+| `/api/auth/login` | `POST` | Public | Authenticate user & receive JWT |
+| `/api/auth/me` | `GET` | Protected | Fetch current logged-in user details |
+| `/api/students` | `GET`, `POST` | Admin | List all students (paginated/filtered) or create student |
+| `/api/students/:id` | `GET`, `PUT`, `DELETE`| Admin/Owner | View, update, or soft-delete student profile |
+| `/api/classes` | `GET`, `POST` | Protected | View classes or create new class (Admin) |
+| `/api/classes/:id/enroll` | `POST` | Admin | Enroll student into class |
+| `/api/attendance` | `GET`, `POST` | Protected | Fetch attendance history or bulk-mark register (Admin) |
+| `/api/grades` | `GET`, `POST` | Protected | Grade entry (Admin) or view student report card |
+| `/api/invoices` | `GET`, `POST` | Protected | Generate invoice (Admin) or fetch student invoices |
+| `/api/payments` | `POST` | Protected | Process invoice payment & record transaction |
+| `/api/announcements` | `GET`, `POST` | Protected | Post announcement (Admin) or view announcements |
+| `/api/notifications` | `GET`, `PUT` | Protected | Fetch student notifications or mark as read |
+| `/api/dashboard/admin` | `GET` | Admin | Administrative school-wide statistics & analytics |
+| `/api/dashboard/student` | `GET` | Student | Personal academic dashboard overview |
+
+---
+
+## 🔒 Security Architecture
+
+1. **Password Hashing**: Passwords stored securely using `bcryptjs` salt hashing.
+2. **Stateless JWT Authorization**: Tokens stored in browser `localStorage` and sent via `Authorization: Bearer <token>` headers.
+3. **Role Enforcement**:
+   - `requireRole('admin')`: Restricts API endpoints exclusively to administrative users.
+   - `requireAdminOrOwner`: Grants access to admins or to students accessing only their personal records (attendance, grades, invoices, profile).
+
+---
+
+## 📦 Production Deployment
+
+### Unified Single-Server Deployment
+1. Build the production React frontend bundle from the `client` directory:
+   ```bash
+   cd client
+   npm run build
+   ```
+2. The output bundle will be placed in `client/dist`.
+3. The Express backend in `server/server.js` is pre-configured to statically serve `client/dist` and fallback to `index.html` for any client routes.
+4. Deploy the `server/` directory to platforms like **Render**, **Railway**, or **Heroku**. Set production environment variables (`MONGO_URI`, `JWT_SECRET`, `NODE_ENV=production`).
+
+---
+
+## 📄 License
+
+This project is open-source and available under the **MIT License**.

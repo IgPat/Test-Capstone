@@ -25,33 +25,39 @@ export default function StudentAnnouncements() {
   };
 
   return (
-    <div>
-      <div className="toolbar">
+    <div className="rebuilt-page">
+      <div className="rebuilt-page-header">
         <div>
-          <h1>School Announcements</h1>
-          <p className="muted">Official updates and news from the school administration.</p>
+          <h1 className="rebuilt-page-title">School Announcements</h1>
+          <p className="rebuilt-page-subtitle">Official updates and news from the school administration.</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="loading">Loading announcements…</div>
+        <div className="rebuilt-loading-state">Loading announcements…</div>
       ) : error ? (
-        <div className="error">{error}</div>
+        <div className="rebuilt-alert rebuilt-alert-error">{error}</div>
       ) : announcements.length === 0 ? (
-        <div className="card empty-state">No announcements posted.</div>
+        <div className="rebuilt-card rebuilt-empty-state">No announcements posted.</div>
       ) : (
-        <div className="grid">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {announcements.map((a) => (
-            <div key={a._id} className="card">
-              <div className="flex" style={{ gap: '10px', marginBottom: '8px' }}>
-                <Megaphone size={20} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ margin: 0 }}>{a.title}</h3>
+            <div key={a._id} className="rebuilt-card" style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+              <div className="dash-notice-mark" style={{ marginTop: '2px', background: 'rgba(33, 73, 61, 0.1)', color: 'var(--portal-primary)', padding: '10px', borderRadius: '10px' }}>
+                <Megaphone size={20} />
               </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontFamily: 'var(--portal-font-serif)', fontSize: '1.2rem', color: 'var(--portal-text-dark)', margin: '0 0 8px', fontWeight: 700 }}>
+                  {a.title}
+                </h3>
 
-              <p style={{ color: 'var(--ink-soft)', lineHeight: '1.6', margin: '8px 0 12px' }}>{a.body}</p>
+                <p style={{ color: 'var(--portal-text-dark)', opacity: 0.88, lineHeight: '1.6', margin: '0 0 14px', fontSize: '.92rem' }}>
+                  {a.body}
+                </p>
 
-              <div style={{ fontSize: '.78rem', color: 'var(--ink-soft)', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-                Posted on <strong>{fmtDate(a.createdAt)}</strong>
+                <div style={{ fontSize: '.8rem', color: 'var(--portal-text-muted)', borderTop: '1px dashed #e1e7df', paddingTop: '10px' }}>
+                  Posted on <strong>{fmtDate(a.createdAt)}</strong>
+                </div>
               </div>
             </div>
           ))}

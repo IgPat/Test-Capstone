@@ -2,17 +2,16 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
+import '../../pages/auth/RebuiltPages.css';
 
 export default function AppLayout() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div className="rebuilt-shell">
       <Navbar />
-      <div className="app-shell">
+      <div className="rebuilt-app-body">
         <Sidebar />
-        <main className="main-area">
-          <div className="page-content">
-            <Outlet />
-          </div>
+        <main className="rebuilt-main-area">
+          <Outlet />
         </main>
       </div>
     </div>

@@ -63,23 +63,23 @@ export default function StudentInvoices() {
   };
 
   return (
-    <div>
-      <div className="toolbar">
+    <div className="rebuilt-page">
+      <div className="rebuilt-page-header">
         <div>
-          <h1>My Fees & Invoices</h1>
-          <p className="muted">View your fee statements and payment history.</p>
+          <h1 className="rebuilt-page-title">My Fees & Invoices</h1>
+          <p className="rebuilt-page-subtitle">View your fee statements and online payment options.</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="loading">Loading fee statements…</div>
+        <div className="rebuilt-loading-state">Loading fee statements…</div>
       ) : error ? (
-        <div className="error">{error}</div>
+        <div className="rebuilt-alert rebuilt-alert-error">{error}</div>
       ) : invoices.length === 0 ? (
-        <div className="card empty-state">No invoices issued to your account yet.</div>
+        <div className="rebuilt-card rebuilt-empty-state">No invoices issued to your account yet.</div>
       ) : (
-        <div className="table-wrap">
-          <table>
+        <div className="rebuilt-table-wrap">
+          <table className="rebuilt-table">
             <thead>
               <tr>
                 <th>Invoice #</th>
@@ -95,23 +95,23 @@ export default function StudentInvoices() {
             <tbody>
               {invoices.map((inv) => {
                 const balance = inv.totalAmount - inv.amountPaid;
-                const statusClass = inv.status === 'paid' ? 'pill-paid' : inv.status === 'partial' ? 'pill-partial' : 'pill-unpaid';
+                const statusBadgeClass = inv.status === 'paid' ? 'rebuilt-badge-paid' : inv.status === 'partial' ? 'rebuilt-badge-partial' : 'rebuilt-badge-unpaid';
                 return (
                   <tr key={inv._id}>
                     <td><strong>{inv.invoiceNumber}</strong></td>
                     <td>{inv.description}</td>
                     <td>{fmtMoney(inv.totalAmount)}</td>
-                    <td style={{ color: 'var(--success)' }}>{fmtMoney(inv.amountPaid)}</td>
-                    <td style={{ color: balance > 0 ? 'var(--danger)' : 'var(--ink-soft)' }}>{fmtMoney(balance)}</td>
-                    <td><span className={`pill ${statusClass}`} style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
+                    <td style={{ color: '#2b6e4e', fontWeight: 600 }}>{fmtMoney(inv.amountPaid)}</td>
+                    <td style={{ color: balance > 0 ? '#b91c1c' : 'var(--portal-text-muted)', fontWeight: balance > 0 ? 700 : 400 }}>{fmtMoney(balance)}</td>
+                    <td><span className={`rebuilt-badge ${statusBadgeClass}`} style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
                     <td>{fmtDate(inv.dueDate)}</td>
                     <td>
                       {balance > 0 ? (
-                        <button className="btn-primary btn-small" onClick={() => openPayModal(inv)}>
+                        <button className="rebuilt-btn rebuilt-btn-primary rebuilt-btn-sm" onClick={() => openPayModal(inv)}>
                           <CreditCard size={14} /> Pay Online
                         </button>
                       ) : (
-                        <span className="flex" style={{ color: 'var(--success)', fontSize: '.84rem', fontWeight: 600 }}>
+                        <span className="rebuilt-flex-center" style={{ color: '#2b6e4e', fontSize: '.84rem', fontWeight: 600, gap: '4px' }}>
                           <CheckCircle size={14} /> Settled
                         </span>
                       )}
@@ -126,46 +126,48 @@ export default function StudentInvoices() {
 
       {/* Online Payment Modal */}
       {showPayModal && selectedInvoice && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
+        <div className="rebuilt-modal-overlay">
+          <div className="rebuilt-modal">
+            <div className="rebuilt-modal-header">
               <h2>Simulate Fee Payment</h2>
-              <button className="modal-close" onClick={() => setShowPayModal(false)}><X size={20} /></button>
+              <button className="rebuilt-modal-close" onClick={() => setShowPayModal(false)}><X size={20} /></button>
             </div>
 
-            <p className="muted" style={{ fontSize: '.88rem' }}>
+            <p style={{ color: 'var(--portal-text-muted)', fontSize: '.88rem', margin: '0 0 16px' }}>
               Invoice <strong>{selectedInvoice.invoiceNumber}</strong> · Outstanding: <strong>{fmtMoney(selectedInvoice.totalAmount - selectedInvoice.amountPaid)}</strong>
             </p>
 
-            {payMsg.success && <div className="success-msg">{payMsg.success}</div>}
-            {payMsg.error && <div className="error">{payMsg.error}</div>}
+            {payMsg.success && <div className="rebuilt-alert rebuilt-alert-success">{payMsg.success}</div>}
+            {payMsg.error && <div className="rebuilt-alert rebuilt-alert-error">{payMsg.error}</div>}
 
-            <form onSubmit={handleSimulatePayment}>
-              <label>Amount to Pay (₦)
+            <form onSubmit={handleSimulatePayment} className="portal-form">
+              <div className="portal-form-group">
+                <label>Amount to Pay (₦)</label>
                 <input
                   type="number"
+                  className="portal-input"
                   required
                   min={1}
                   max={selectedInvoice.totalAmount - selectedInvoice.amountPaid}
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
                 />
-              </label>
+              </div>
 
-              <div className="card" style={{ background: 'var(--bg)', marginTop: '14px', fontSize: '.84rem' }}>
-                <div className="flex" style={{ gap: '8px', color: 'var(--ink-soft)' }}>
+              <div className="rebuilt-card" style={{ background: '#f4f6f0', marginTop: '14px', padding: '12px 16px' }}>
+                <div className="rebuilt-flex-center" style={{ gap: '10px', color: 'var(--portal-text-muted)', fontSize: '.84rem' }}>
                   <CreditCard size={16} />
                   <span>Test Gateway: Click below to simulate online card authorization.</span>
                 </div>
               </div>
 
               <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn-secondary" onClick={() => setShowPayModal(false)}>Cancel</button>
+                <button type="button" className="rebuilt-btn rebuilt-btn-secondary" onClick={() => setShowPayModal(false)}>Cancel</button>
                 <Payment
-                invoice={selectedInvoice}
-                amount={payAmount}
-                email={selectedInvoice?.student?.user?.email}
-                onSuccess={() => {
+                  invoice={selectedInvoice}
+                  amount={payAmount}
+                  email={selectedInvoice?.student?.user?.email}
+                  onSuccess={() => {
                     setShowPayModal(false);
                     fetchMyInvoices();
                   }}
