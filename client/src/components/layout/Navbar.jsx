@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
-import { fmtDate } from "../../utils/formatters";
-import { Bell, LogOut, GraduationCap, CheckCheck, Menu, X } from "lucide-react";
+import { fmtDate, fmtTimeAgo } from "../../utils/formatters";
+import { Bell, LogOut, GraduationCap, CheckCheck, Menu, X, Check, Inbox, BellOff } from "lucide-react";
 import "../../pages/auth/RebuiltPages.css";
 
 export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
@@ -13,10 +13,34 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotif, setLoadingNotif] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+
+  const notifRef = useRef(null);
 
   useEffect(() => {
     fetchNotificationBadge();
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotif(false);
+      }
+    }
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setShowNotif(false);
+      }
+    }
+    if (showNotif) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showNotif]);
 
   const fetchNotificationBadge = async () => {
     try {
@@ -37,6 +61,7 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
     try {
       const res = await api.get("/notifications");
       setNotifications(res.notifications || []);
+      setUnreadCount(res.unreadCount || 0);
     } catch (err) {
       setNotifications([]);
     } finally {
@@ -54,6 +79,19 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
     }
   };
 
+  const handleMarkSingleRead = async (id, e) => {
+    if (e) e.stopPropagation();
+    try {
+      await api.put(`/notifications/${id}/read`);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      /* ignore */
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate("/");
@@ -61,6 +99,11 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
 
   const dashboardPath =
     user?.role === "admin" ? "/admin/dashboard" : "/student/dashboard";
+
+  const filteredNotifs =
+    activeTab === "unread"
+      ? notifications.filter((n) => !n.isRead)
+      : notifications;
 
   return (
     <header className="rebuilt-navbar">
@@ -83,74 +126,143 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
       </div>
 
       <div className="rebuilt-navbar-right">
-        <div className="rebuilt-notif-container">
+        <div className="rebuilt-notif-container" ref={notifRef}>
           <button
-            className="rebuilt-notif-btn"
+            className={`rebuilt-notif-btn ${showNotif ? "active" : ""}`}
             onClick={toggleNotifications}
             title="Notifications"
             aria-label="Notifications"
+            aria-expanded={showNotif}
+            aria-haspopup="true"
           >
             <Bell size={18} />
-            {unreadCount > 0 && <span className="rebuilt-notif-badge">{unreadCount}</span>}
+            {unreadCount > 0 && (
+              <span className="rebuilt-notif-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+            )}
           </button>
 
           {showNotif && (
-            <div className="rebuilt-notif-panel">
+            <>
               <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "10px",
-                  paddingBottom: "8px",
-                  borderBottom: "1px solid #edf0eb",
-                }}
+                className="rebuilt-notif-backdrop"
+                onClick={() => setShowNotif(false)}
+                aria-hidden="true"
+              />
+              <div
+                className="rebuilt-notif-panel"
+                role="dialog"
+                aria-label="Notifications Feed"
               >
-                <strong style={{ fontSize: "13px", color: "var(--portal-ink)" }}>
-                  Notifications
-                </strong>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={handleMarkAllRead}
-                    style={{
-                      border: 0,
-                      background: "transparent",
-                      color: "var(--portal-green)",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                  >
-                    <CheckCheck size={13} /> Mark all read
-                  </button>
-                )}
-              </div>
-
-              {loadingNotif ? (
-                <div style={{ fontSize: "12px", color: "var(--portal-muted)", padding: "12px 0" }}>
-                  Loading notifications…
-                </div>
-              ) : notifications.length === 0 ? (
-                <div style={{ fontSize: "12px", color: "var(--portal-muted)", padding: "12px 0" }}>
-                  No notifications yet.
-                </div>
-              ) : (
-                notifications.map((n) => (
-                  <div
-                    key={n._id}
-                    className={`rebuilt-notif-item ${n.isRead ? "" : "unread"}`}
-                  >
-                    <div>{n.message}</div>
-                    <div style={{ fontSize: "10px", color: "#8fa095", marginTop: "3px" }}>
-                      {fmtDate(n.createdAt)}
-                    </div>
+                <div className="rebuilt-notif-header">
+                  <div className="rebuilt-notif-header-title">
+                    <strong>Notifications</strong>
+                    {unreadCount > 0 && (
+                      <span className="rebuilt-notif-unread-pill">
+                        {unreadCount} unread
+                      </span>
+                    )}
                   </div>
-                ))
-              )}
-            </div>
+                  {unreadCount > 0 && (
+                    <button
+                      className="rebuilt-notif-mark-all"
+                      onClick={handleMarkAllRead}
+                      title="Mark all notifications as read"
+                    >
+                      <CheckCheck size={14} /> Mark all read
+                    </button>
+                  )}
+                </div>
+
+                <div className="rebuilt-notif-tabs" role="tablist">
+                  <button
+                    className={`rebuilt-notif-tab ${activeTab === "all" ? "active" : ""}`}
+                    onClick={() => setActiveTab("all")}
+                    role="tab"
+                    aria-selected={activeTab === "all"}
+                  >
+                    <span>All</span>
+                    <span className="rebuilt-notif-tab-count">
+                      {notifications.length}
+                    </span>
+                  </button>
+                  <button
+                    className={`rebuilt-notif-tab ${activeTab === "unread" ? "active" : ""}`}
+                    onClick={() => setActiveTab("unread")}
+                    role="tab"
+                    aria-selected={activeTab === "unread"}
+                  >
+                    <span>Unread</span>
+                    {unreadCount > 0 && (
+                      <span className="rebuilt-notif-tab-count unread">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                <div className="rebuilt-notif-body">
+                  {loadingNotif ? (
+                    <div className="rebuilt-notif-loading">
+                      <div className="rebuilt-notif-skeleton" />
+                      <div className="rebuilt-notif-skeleton short" />
+                      <div className="rebuilt-notif-skeleton" />
+                    </div>
+                  ) : filteredNotifs.length === 0 ? (
+                    <div className="rebuilt-notif-empty">
+                      {activeTab === "unread" ? (
+                        <>
+                          <Inbox size={32} className="rebuilt-notif-empty-icon" />
+                          <p className="rebuilt-notif-empty-title">All caught up!</p>
+                          <p className="rebuilt-notif-empty-desc">
+                            You have no unread notifications right now.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <BellOff size={32} className="rebuilt-notif-empty-icon" />
+                          <p className="rebuilt-notif-empty-title">No notifications</p>
+                          <p className="rebuilt-notif-empty-desc">
+                            When announcements or updates arrive, they will appear here.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rebuilt-notif-list">
+                      {filteredNotifs.map((n) => (
+                        <div
+                          key={n._id}
+                          className={`rebuilt-notif-item ${n.isRead ? "read" : "unread"}`}
+                          onClick={(e) => !n.isRead && handleMarkSingleRead(n._id, e)}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          <div className="rebuilt-notif-item-status">
+                            {!n.isRead && <span className="rebuilt-notif-dot" />}
+                          </div>
+                          <div className="rebuilt-notif-item-content">
+                            <div className="rebuilt-notif-msg">{n.message}</div>
+                            <div className="rebuilt-notif-time">
+                              {fmtTimeAgo(n.createdAt)}
+                            </div>
+                          </div>
+                          {!n.isRead && (
+                            <button
+                              className="rebuilt-notif-item-read-btn"
+                              onClick={(e) => handleMarkSingleRead(n._id, e)}
+                              title="Mark as read"
+                              aria-label="Mark as read"
+                            >
+                              <Check size={13} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </div>
 
@@ -165,4 +277,5 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
     </header>
   );
 }
+
 
